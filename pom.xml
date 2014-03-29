@@ -359,6 +359,7 @@
                     <useFile>false</useFile>
                     <includes>
                         <include>**/*Spec.*</include>
+                        <include>**/*Test.*</include>
                     </includes>
                     <systemPropertyVariables>
                         <scct.project.name>${project.name}</scct.project.name>
@@ -425,23 +426,6 @@
                         <id>attach-javadocs</id>
                         <goals>
                             <goal>doc-jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>com.mycila.maven-license-plugin</groupId>
-                <artifactId>maven-license-plugin</artifactId>
-                <version>${maven-license-plugin.version}</version>
-                <configuration>
-                    <header>${header.basedir}/src/etc/header.txt</header>
-                    <strictCheck>false</strictCheck>
-                </configuration>
-                <executions>
-                    <execution>
-                        <phase>process-sources</phase>
-                        <goals>
-                            <goal>format</goal>
                         </goals>
                     </execution>
                 </executions>
