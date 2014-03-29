@@ -16,20 +16,7 @@ import org.greencheek.spy.extensions.SerializingTranscoder
 import org.greencheek.dns.lookup.{TCPAddressChecker, AddressChecker, LookupService}
 import scala.collection.JavaConversions._
 
-//builder.setHashAlg (DefaultHashAlgorithm.KETAMA_HASH)
-//
-//
-//builder.setProtocol (ConnectionFactoryBuilder.Protocol.BINARY)
-//
-//
-//builder.setFailureMode (FailureMode.Redistribute)
-//
-//
-//builder.setLocatorType (ConnectionFactoryBuilder.Locator.CONSISTENT)
-//
-//
-//builder.setTranscoder (new SerializingTranscoder)
-/**
+/*
  * Created by dominictootell on 26/03/2014.
  */
 object MemcachedCache {
