@@ -1,0 +1,38 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.greencheek.spray</groupId>
+    <artifactId>spray-cached-spymemcached</artifactId>
+    <packaging>jar</packaging>
+    <name>Spray Spy Memcached Cache Implementation</name>
+    <description>Spy Memcached Backend for the Spray Cache API</description>
+    <url>http://tootedom.github.com</url>
+    <parent>
+        <artifactId>spray-cache-extensions</artifactId>
+        <groupId>org.greencheek.spray</groupId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+    <properties>
+        <header.basedir>${project.parent.basedir}</header.basedir>
+        <spy.version>2.10.6</spy.version>
+        <jsr666e.version>1.1.0</jsr666e.version>
+        <slf4j.version>1.7.6</slf4j.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.spy</groupId>
+            <artifactId>spymemcached</artifactId>
+            <version>${spy.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.twitter</groupId>
+            <artifactId>jsr166e</artifactId>
+            <version>${jsr666e.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+    </dependencies>
+</project>
