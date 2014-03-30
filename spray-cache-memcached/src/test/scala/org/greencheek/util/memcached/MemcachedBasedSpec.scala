@@ -2,45 +2,23 @@ package org.greencheek.util.memcached
 
 import org.specs2.mutable.Specification
 import com.thimbleware.jmemcached._
-import java.io.IOException
 import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap
 import java.net.{ServerSocket, InetSocketAddress}
 import scala.Some
 import com.thimbleware.jmemcached.storage.CacheStorage
-import org.greencheek.jms.util.PortUtil
-import org.apache.activemq.broker.BrokerService
 import org.greencheek.util.PortUtil
 
-private class MemCacheDaemonWrapper(val daemon : MemCacheDaemon[LocalCacheElement], val port : Int)
+class MemcachedDaemonWrapper(val daemon: Option[MemCacheDaemon[LocalCacheElement]], val port: Int)
 
-/**
- * Created by dominictootell on 29/03/2014.
- */
-trait MemcachedBasedSpec extends Specification {
-  import org.specs2._
-  import specification._
+object MemcachedDaemonFactory {
 
-  @volatile var memcachedd : Option[MemCacheDaemonWrapper] = None
-  @volatile var portServerSocket : ServerSocket = null
-  @volatile var port : Int = -1
-
-  /** the map method allows to "post-process" the fragments after their creation */
-  override def map(fs: =>Fragments) = Step(startMemcached) ^ fs ^ Step(stopMemcached)
-
-  def startMemcached() = {
-  {
-    portServerSocket = PortUtil.findFreePort
-    port = PortUtil.getPort(portServerSocket)
-    startMemcachedDaemon(port)
+  def createMemcachedDaemon(binary : Boolean = true) : MemcachedDaemonWrapper = {
+    val portServerSocket = PortUtil.findFreePort
+    val memcachedDport = PortUtil.getPort(portServerSocket)
+    startMemcachedDaemon(memcachedDport,binary)
   }
 
-  def stopMemcached() = {
-    stopMemcachedDaemon(memcachedd)
-  }
-
-
-  private def startMemcachedDaemon(port : Int)  : Option[MemCacheDaemonWrapper] =
-  {
+  private[memcached] def startMemcachedDaemon(port: Int, binary : Boolean = true): MemcachedDaemonWrapper = {
     try {
       val daemon: MemCacheDaemon[LocalCacheElement] = new MemCacheDaemon[LocalCacheElement]();
 
@@ -49,39 +27,59 @@ trait MemcachedBasedSpec extends Specification {
       daemon.setCache(cacheImpl);
       daemon.setAddr(new InetSocketAddress("localhost", port));
       daemon.setIdleTime(100000);
-      daemon.setBinary(false);
+      daemon.setBinary(binary);
       daemon.setVerbose(true);
       daemon.start();
 
       // give the daemon a moment to start
       Thread.sleep(500);
-      Some(new MemCacheDaemonWrapper(daemon, port));
+      new MemcachedDaemonWrapper(Some(daemon), port);
     } catch {
-      case e : Exception => {
-        None
+      case e: Exception => {
+        new MemcachedDaemonWrapper(None, port);
       }
     }
   }
 
-  def stopMemcachedDaemon(memcachedDaemon : Option[MemCacheDaemonWrapper]) : Unit =
-  {
-    if(memcachedDaemon!=None)
-    {
-      if(memcachedDaemon.get.daemon.isRunning())
-      {
+  def stopMemcachedDaemon(memcachedDaemon: MemcachedDaemonWrapper): Unit = {
+    if (memcachedDaemon.daemon != None) {
+      if (memcachedDaemon.daemon.get.isRunning()) {
         System.out.println("Shutting down the Memcached Daemon");
-        memcachedDaemon.get.daemon.stop();
+        memcachedDaemon.daemon.get.stop();
 
         try {
           Thread.sleep(500);
         } catch {
-          case e : InterruptedException => {
-            // TODO Auto-generated catch block
+          case e: InterruptedException => {
             e.printStackTrace();
           }
         }
       }
     }
   }
+}
+
+trait MemcachedBasedSpec extends Specification {
+
+  import org.specs2._
+  import specification._
+
+  @volatile var memcachedD: MemcachedDaemonWrapper = null
+  @volatile var portServerSocket: ServerSocket = null
+  @volatile var memcachedDport: Int = -1
+
+  /** the map method allows to "post-process" the fragments after their creation */
+  override def map(fs: => Fragments) = Step(startMemcached) ^ fs ^ Step(stopMemcached)
+
+  def startMemcached() = {
+    portServerSocket = PortUtil.findFreePort
+    memcachedDport = PortUtil.getPort(portServerSocket)
+    memcachedD = MemcachedDaemonFactory.startMemcachedDaemon(memcachedDport,true)
+  }
+
+  def stopMemcached: Unit = {
+    MemcachedDaemonFactory.stopMemcachedDaemon(memcachedD)
+  }
+
 
 }

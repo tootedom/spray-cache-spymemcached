@@ -12,13 +12,23 @@ import spray.util._
 
 import scala.concurrent._
 import ExecutionContext.Implicits.global
+import org.greencheek.util.memcached.{WithMemcached}
+import net.spy.memcached.ConnectionFactoryBuilder.Protocol
+import org.specs2.runner.JUnitRunner
+import org.junit.runner.RunWith
 
-class MemcachedCacheSpec extends Specification {
+@RunWith(classOf[JUnitRunner])
+abstract class MemcachedCacheSpec extends Specification {
   implicit val system = ActorSystem()
 
-  "An LruCache" should {
-    "store uncached values" in {
-      val cache = lruCache[String]()
+  def getMemcacheContext() : WithMemcached
+
+  val memcachedContext = getMemcacheContext();
+
+
+  "A Memcached cache" >> {
+    "store uncached values" in memcachedContext {
+      val cache = memcachedCache[String]("localhost:"+memcachedContext.memcached.port,binary = memcachedContext.binary)
 
       cache("1")("A").await == "A"
       cache("2")("B").await == "B"
@@ -30,9 +40,11 @@ class MemcachedCacheSpec extends Specification {
       cache.get("1").get.await == "A"
       cache.get("5").get.await == "F"
       cache.get("9") == None
+
+      true
     }
-    "store more than max capacity" in {
-      val cache = lruCache[String](1)
+    "store more than max capacity" in memcachedContext {
+      val cache = memcachedCache[String]("localhost:"+memcachedContext.memcached.port,1,binary = memcachedContext.binary)
 
       val option1 = cache("15")( future {
         try {
@@ -64,7 +76,9 @@ class MemcachedCacheSpec extends Specification {
       cache.get("15").get.await == "hello"
       cache.get("25").get.await == "hello2"
 
+      memcachedContext.memcached.daemon.get.getCache.getCurrentItems == 2
 
+      true
     }
 //    "return stored values upon cache hit on existing values" in {
 //      val cache = lruCache[String]()
@@ -153,8 +167,13 @@ class MemcachedCacheSpec extends Specification {
 
   step(system.shutdown())
 
-  def lruCache[T](maxCapacity: Int = 500, initialCapacity: Int = 16,
-                  timeToLive: Duration = Duration.Zero, timeToIdle: Duration = Duration.Zero) =
-    new MemcachedCache[T](timeToLive,maxCapacity)
+  def memcachedCache[T](hosts: String, maxCapacity: Int = 500, initialCapacity: Int = 16,
+                        timeToLive: Duration = Duration.Zero, timeToIdle: Duration = Duration.Zero,
+                        binary : Boolean = true) = {
+    binary match {
+      case true => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.BINARY)
+      case false => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.TEXT)
+    }
+  }
 
 }

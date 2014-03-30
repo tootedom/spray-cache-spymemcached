@@ -218,7 +218,6 @@
     </dependencies>
 
     <build>
-
         <plugins>
             <plugin>
                 <groupId>org.jacoco</groupId>
@@ -361,12 +360,6 @@
                         <include>**/*Spec.*</include>
                         <include>**/*Test.*</include>
                     </includes>
-                    <systemPropertyVariables>
-                        <scct.project.name>${project.name}</scct.project.name>
-                        <scct.coverage.file>${project.build.outputDirectory}/coverage.data</scct.coverage.file>
-                        <scct.report.dir>${project.build.directory}/coverage-report</scct.report.dir>
-                        <scct.source.dir>${project.build.sourceDirectory}</scct.source.dir>
-                    </systemPropertyVariables>
                 </configuration>
             </plugin>
             <plugin>
