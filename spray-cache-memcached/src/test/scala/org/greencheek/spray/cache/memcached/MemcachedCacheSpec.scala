@@ -1,7 +1,7 @@
 package org.greencheek.spray.cache.memcached
 
 
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.{TimeUnit, CountDownLatch}
 import akka.actor.ActorSystem
 import scala.concurrent.duration._
 import org.specs2.mutable.Specification
@@ -192,9 +192,11 @@ abstract class MemcachedCacheSpec extends Specification {
                         allowFlush : Boolean = true, waitForMemcachedRemove : Boolean = false) = {
     binary match {
       case true => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.BINARY,
-        waitForMemcachedSet = waitForMemcachedSet, allowFlush = allowFlush, waitForMemcachedRemove = waitForMemcachedRemove)
+        waitForMemcachedSet = waitForMemcachedSet, allowFlush = allowFlush, waitForMemcachedRemove = waitForMemcachedRemove,
+        removeWaitDuration = Duration(4,TimeUnit.SECONDS))
       case false => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.TEXT,
-        waitForMemcachedSet = waitForMemcachedSet,allowFlush = allowFlush, waitForMemcachedRemove = waitForMemcachedRemove)
+        waitForMemcachedSet = waitForMemcachedSet,allowFlush = allowFlush, waitForMemcachedRemove = waitForMemcachedRemove,
+        removeWaitDuration = Duration(4,TimeUnit.SECONDS))
     }
   }
 
