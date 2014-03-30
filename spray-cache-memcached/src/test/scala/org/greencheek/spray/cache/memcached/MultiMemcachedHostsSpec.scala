@@ -34,8 +34,8 @@ class MultiMemcachedHostsSpec extends MemcachedBasedSpec {
         doHostConnectionAttempt = true)
 
 
-      cache("1")("A").await == "A"
-      cache("2")("B").await == "B"
+      cache("1")("A").await === "A"
+      cache("2")("B").await === "B"
 
       memcachedContext.memcached.daemon.get.getCache.getCurrentItems == 2
       memcachedD.daemon.get.getCache.getCurrentItems == 0

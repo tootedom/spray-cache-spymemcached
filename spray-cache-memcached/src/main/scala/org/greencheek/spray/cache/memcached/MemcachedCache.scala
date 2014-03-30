@@ -227,11 +227,11 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     .build()
 
   private def logCacheHit(key: String): Unit = {
-    cachedHitMissLogger.debug("cachehit {}")
+    cachedHitMissLogger.debug("{ \"cachehit\" : \"{}\"}",key)
   }
 
   private def logCacheMiss(key: String): Unit = {
-    cachedHitMissLogger.debug("cachemiss {}")
+    cachedHitMissLogger.debug("{ \"cachemiss\" : \"{}\"}",key)
   }
 
   private def getFromDistributedCache(key: String): Option[Future[Serializable]] = {
