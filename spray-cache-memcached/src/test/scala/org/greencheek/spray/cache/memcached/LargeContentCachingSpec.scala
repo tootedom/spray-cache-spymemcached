@@ -45,7 +45,7 @@ class LargeContentCachingSpec extends MemcachedBasedSpec {
       val hosts = "localhost:"+memcachedContext.memcached.port
 
       val cache = new MemcachedCache[String] ( memcachedHosts = hosts, protocol = Protocol.TEXT,
-        doHostConnectionAttempt = true)
+        doHostConnectionAttempt = true, waitForMemcachedSet = true)
 
 
       cache("1")(content).await === content
