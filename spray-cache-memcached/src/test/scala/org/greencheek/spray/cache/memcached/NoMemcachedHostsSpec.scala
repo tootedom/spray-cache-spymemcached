@@ -12,6 +12,9 @@ import ExecutionContext.Implicits.global
 import org.greencheek.util.PortUtil
 import org.specs2.runner.JUnitRunner
 import org.junit.runner.RunWith
+import java.util.UUID
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.Duration
 
 /**
  * Created by dominictootell on 30/03/2014.
@@ -25,7 +28,7 @@ class NoMemcachedHostsSpec extends MemcachedBasedSpec {
 
 
   "A Memcached cache" >> {
-    "can store values when one host is unavailabled" in memcachedContext {
+    "is non invasive when no host are available" in memcachedContext {
 
       val randomPort = PortUtil.getPort(PortUtil.findFreePort)
       val hosts = "localhost:" + randomPort + ",localhost:" + randomPort
@@ -59,6 +62,94 @@ class NoMemcachedHostsSpec extends MemcachedBasedSpec {
       memcachedD.daemon.get.getCache.getCurrentItems == 0
 
     }
+  }
+  "is non invasive when no host are available" in memcachedContext {
+    val cache = new MemcachedCache[String](memcachedHosts = "", protocol = Protocol.TEXT,
+      doHostConnectionAttempt = true, throwExceptionOnNoHosts = false)
+
+    val myFuture = future {
+      try {
+        Thread.sleep(5000)
+      } catch {
+        case e: Exception => {
+
+        }
+      }
+      "hello there"
+    }
+
+    cache("1")("A").await == "A"
+    cache("2")("B").await == "B"
+
+    val request1 = cache("3")(myFuture)
+    val request2 = cache("3")(myFuture)
+    val request3 = cache("3")(myFuture)
+
+    request1.await == "hello there"
+    request2.await == "hello there"
+    request3.await == "hello there"
+
+    memcachedContext.memcached.daemon.get.getCache.getCurrentItems == 0
+    memcachedD.daemon.get.getCache.getCurrentItems == 0
+
+  }
+  "is invasive when requested" in {
+    var thrown = false
+    try {
+      new MemcachedCache[String](memcachedHosts = "", protocol = Protocol.TEXT,
+        doHostConnectionAttempt = true, throwExceptionOnNoHosts = true)
+      thrown = false
+    } catch {
+      case e : InstantiationError => {
+        thrown = true
+      }
+    }
+
+    thrown == true
+  }
+  "is invasive when requested on fake dns name" in {
+    var thrown = false
+    try {
+      new MemcachedCache[String](memcachedHosts = "localhost.1", protocol = Protocol.TEXT,
+        doHostConnectionAttempt = true, throwExceptionOnNoHosts = true)
+      thrown = false
+    } catch {
+      case e : InstantiationError => {
+        thrown = true
+      }
+    }
+
+    thrown == true
+  }
+  "is not invasive on fake dns names" in memcachedContext {
+    val cache = new MemcachedCache[String](memcachedHosts = "localhost.1", protocol = Protocol.TEXT,
+      doHostConnectionAttempt = true, throwExceptionOnNoHosts = false, dnsConnectionTimeout = Duration(1,TimeUnit.SECONDS))
+
+    val myFuture = future {
+      try {
+        Thread.sleep(5000)
+      } catch {
+        case e: Exception => {
+
+        }
+      }
+      "hello there"
+    }
+
+    cache("1")("A").await == "A"
+    cache("2")("B").await == "B"
+
+    val request1 = cache("3")(myFuture)
+    val request2 = cache("3")(myFuture)
+    val request3 = cache("3")(myFuture)
+
+    request1.await == "hello there"
+    request2.await == "hello there"
+    request3.await == "hello there"
+
+    memcachedContext.memcached.daemon.get.getCache.getCurrentItems == 0
+    memcachedD.daemon.get.getCache.getCurrentItems == 0
+
   }
 
 }

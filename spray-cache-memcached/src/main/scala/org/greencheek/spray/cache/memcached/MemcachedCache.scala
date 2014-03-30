@@ -137,7 +137,9 @@ object MemcachedCache {
           }
       }
 
-      memcachedNodes = (host, port) :: memcachedNodes
+      if ( host.length != 0 ) {
+        memcachedNodes = (host, port) :: memcachedNodes
+      }
     }
     return memcachedNodes
   }
@@ -255,6 +257,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   def get(key: Any): Option[Future[Serializable]] = {
     if(!isEnabled) {
+      logCacheMiss(key.toString)
       None
     } else {
       store.get(key) match {
@@ -274,6 +277,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   def apply(key: Any, genValue: () => Future[Serializable])(implicit ec: ExecutionContext): Future[Serializable] = {
     // check local whilst computation is occurring cache.
     if(!isEnabled) {
+      logCacheMiss(key.toString)
       genValue()
     }
     else {
@@ -292,7 +296,9 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                       promise.complete(value)
                       // Need to check memcached exception here
                       try {
-                        memcached.set(key.toString, timeToLive.toSeconds.toInt, value.get)
+                        if (!value.isFailure) {
+                          memcached.set(key.toString, timeToLive.toSeconds.toInt, value.get)
+                        }
                       } catch {
                         case e: Exception => {
 
