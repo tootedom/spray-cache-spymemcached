@@ -20,7 +20,7 @@ import scala.collection.JavaConversions._
  * Created by dominictootell on 26/03/2014.
  */
 object MemcachedCache {
-  private val logger : Logger = LoggerFactory.getLogger(MemcachedCache.getClass)
+  private val logger : Logger = LoggerFactory.getLogger(classOf[MemcachedCache[Serializable]])
   private val DEFAULT_EXPIRY : Duration = Duration(60,TimeUnit.MINUTES)
   private val DEFAULT_MEMCACHED_PORT : Int = 11211
   private val DEFAULT_DNS_TIMEOUT : Duration = Duration(3,TimeUnit.SECONDS)
@@ -211,7 +211,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   }
 
-  private val logger  : Logger = LoggerFactory.getLogger(MemcachedCache.getClass)
+  private val logger  : Logger = LoggerFactory.getLogger(classOf[MemcachedCache[Serializable]])
   private val cachedHitMissLogger  : Logger  = LoggerFactory.getLogger("MemcachedCacheHitsLogger")
 
   require(maxCapacity >= 0, "maxCapacity must not be negative")
