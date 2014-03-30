@@ -161,7 +161,8 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val doHostConnectionAttempt : Boolean = true,
                                    val hostConnectionAttemptTimeout : Duration = Duration(1,TimeUnit.SECONDS),
                                    val waitForMemcachedSet : Boolean = false,
-                                   val setWaitDuration : Duration = Duration(2,TimeUnit.SECONDS)
+                                   val setWaitDuration : Duration = Duration(2,TimeUnit.SECONDS),
+                                   val allowFlush : Boolean = false
                                    ) extends Cache[Serializable] {
 
   @volatile private var isEnabled = false
@@ -382,7 +383,18 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   }
 
   def clear(): Unit = {
-    throw new UnsupportedOperationException
+    if ( allowFlush ) {
+      try {
+        store.clear()
+        memcached.flush()
+      } catch {
+        case e : Exception => {
+          logger.error("Exception encountered when attempting to flush memcached")
+        }
+      }
+    } else {
+      throw new UnsupportedOperationException
+    }
   }
 
   def size = {
