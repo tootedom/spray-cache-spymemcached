@@ -162,7 +162,9 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val hostConnectionAttemptTimeout : Duration = Duration(1,TimeUnit.SECONDS),
                                    val waitForMemcachedSet : Boolean = false,
                                    val setWaitDuration : Duration = Duration(2,TimeUnit.SECONDS),
-                                   val allowFlush : Boolean = false
+                                   val allowFlush : Boolean = false,
+                                   val waitForMemcachedRemove : Boolean = false,
+                                   val removeWaitDuration : Duration = Duration(2,TimeUnit.SECONDS)
                                    ) extends Cache[Serializable] {
 
   @volatile private var isEnabled = false
@@ -361,7 +363,18 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         }
         case future => {
           try {
-            memcached.delete(keyString)
+            if(waitForMemcachedRemove) {
+              val futureRemove = memcached.delete(keyString)
+              try {
+                futureRemove.get(removeWaitDuration.toMillis, TimeUnit.MILLISECONDS)
+              } catch {
+                case e: Exception => {
+                  logger.warn("Exception waiting for memcached remove to occur")
+                }
+              }
+            } else {
+              memcached.delete(keyString)
+            }
           } catch {
             case e: Exception => {
               logger.error("exception removing item {} from memcached", keyString)

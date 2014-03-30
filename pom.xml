@@ -101,10 +101,7 @@
             <name>Scala-tools Maven2 Repository</name>
             <url>http://scala-tools.org/repo-releases</url>
         </pluginRepository>
-        <!--<pluginRepository>-->
-            <!--<id>scct-plugin-repo</id>-->
-            <!--<url>http://mtkopone.github.com/scct/maven-repo</url>-->
-        <!--</pluginRepository>-->
+
         <pluginRepository>
             <id>tims-repo</id>
             <url>http://timezra.github.com/maven/releases </url>
@@ -128,66 +125,19 @@
         </pluginRepository>
     </pluginRepositories>
     <dependencies>
-
         <dependency>
             <groupId>io.spray</groupId>
             <artifactId>spray-caching</artifactId>
             <version>${spray.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-compiler</artifactId>
-            <version>${scala.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>${scala.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.typesafe.akka</groupId>
             <artifactId>akka-actor_2.10</artifactId>
             <version>${akka.version}</version>
+            <scope>provided</scope>
         </dependency>
 
-
-
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-reflect</artifactId>
-            <version>${scala.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>${logback.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.clapper</groupId>
-            <artifactId>grizzled-slf4j_2.10</artifactId>
-            <version>${grizzled-slf4j.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.latencyutils</groupId>
-            <artifactId>LatencyUtils</artifactId>
-            <version>1.0.3</version>
-        </dependency>
-        <dependency>
-            <groupId>org.hdrhistogram</groupId>
-            <artifactId>HdrHistogram</artifactId>
-            <version>1.0.9</version>
-        </dependency>
-        <dependency>
-            <groupId>com.dongxiguo</groupId>
-            <artifactId>fastring_2.10</artifactId>
-            <version>0.2.2</version>
-        </dependency>
         <!-- test -->
         <dependency>
             <groupId>junit</groupId>
@@ -201,14 +151,6 @@
             <version>${specs2.version}</version>
             <scope>test</scope>
         </dependency>
-
-        <!--<dependency>-->
-            <!--<groupId>reaktor</groupId>-->
-            <!--<artifactId>scct_2.10</artifactId>-->
-            <!--<version>0.2-SNAPSHOT</version>-->
-            <!--<scope>test</scope>-->
-        <!--</dependency>-->
-
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_2.10</artifactId>
@@ -247,20 +189,6 @@
                        Ensures that the code coverage report for unit tests is created after
                        unit tests have been run.
                    -->
-                    <!--<execution>-->
-                        <!--<id>post-unit-test</id>-->
-                        <!--<phase>test</phase>-->
-                        <!--<goals>-->
-                            <!--<goal>report</goal>-->
-                        <!--</goals>-->
-                        <!--<configuration>-->
-                            <!--&lt;!&ndash; Sets the path to the file which contains the execution data. &ndash;&gt;-->
-                            <!--<dataFile>${project.build.directory}/coverage-reports/jacoco-ut.exec</dataFile>-->
-                            <!--&lt;!&ndash; Sets the output directory for the code coverage report. &ndash;&gt;-->
-                            <!--<outputDirectory>${project.reporting.outputDirectory}/jacoco-ut</outputDirectory>-->
-                        <!--</configuration>-->
-                    <!--</execution>-->
-
                 </executions>
 
             </plugin>

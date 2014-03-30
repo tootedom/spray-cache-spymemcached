@@ -140,11 +140,12 @@ abstract class MemcachedCacheSpec extends Specification {
     }
     "not cache exceptions" in memcachedContext {
       val cache = memcachedCache[String](getMemcachedHostsString.getOrElse("localhost:"+memcachedContext.memcached.port),binary = memcachedContext.binary)
+
       cache(167)((throw new RuntimeException("Naa")): String).await must throwA[RuntimeException]("Naa")
       cache(167)("A").await === "A"
     }
     "remove items from the cache" in memcachedContext{
-      val cache = memcachedCache[String]("localhost:"+memcachedContext.memcached.port,binary = false)
+      val cache = memcachedCache[String]("localhost:"+memcachedContext.memcached.port,binary = false,waitForMemcachedRemove = true)
 
       cache(144)("A").await === "A"
 
@@ -187,10 +188,13 @@ abstract class MemcachedCacheSpec extends Specification {
 
   def memcachedCache[T](hosts: String, maxCapacity: Int = 500, initialCapacity: Int = 16,
                         timeToLive: Duration = Duration.Zero, timeToIdle: Duration = Duration.Zero,
-                        binary : Boolean = true, waitForMemcachedSet : Boolean = false, allowFlush : Boolean = true) = {
+                        binary : Boolean = true, waitForMemcachedSet : Boolean = false,
+                        allowFlush : Boolean = true, waitForMemcachedRemove : Boolean = false) = {
     binary match {
-      case true => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.BINARY, waitForMemcachedSet = waitForMemcachedSet, allowFlush = allowFlush)
-      case false => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.TEXT, waitForMemcachedSet = waitForMemcachedSet,allowFlush = allowFlush)
+      case true => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.BINARY,
+        waitForMemcachedSet = waitForMemcachedSet, allowFlush = allowFlush, waitForMemcachedRemove = waitForMemcachedRemove)
+      case false => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.TEXT,
+        waitForMemcachedSet = waitForMemcachedSet,allowFlush = allowFlush, waitForMemcachedRemove = waitForMemcachedRemove)
     }
   }
 
