@@ -150,6 +150,7 @@ abstract class MemcachedCacheSpec extends Specification {
       cache(144)("A").await === "A"
 
       cache.remove(144)
+      cache.remove(144)
 
       cache(144)("B").await === "B"
 
