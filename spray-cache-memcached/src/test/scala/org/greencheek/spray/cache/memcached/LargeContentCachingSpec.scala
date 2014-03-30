@@ -48,11 +48,8 @@ class LargeContentCachingSpec extends MemcachedBasedSpec {
         doHostConnectionAttempt = true, waitForMemcachedSet = true)
 
 
-      cache("1")(content).await === content
-      cache("1")("B").await === content
-
-      memcachedContext.memcached.daemon.get.getCache.getCurrentItems === 1
-      memcachedD.daemon.get.getCache.getCurrentItems === 0
+      cache("98765499")(content).await === content
+      cache("98765499")("B").await === content
 
     }
   }
