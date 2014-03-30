@@ -159,7 +159,9 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val throwExceptionOnNoHosts : Boolean = false,
                                    val dnsConnectionTimeout : Duration = Duration(3,TimeUnit.SECONDS),
                                    val doHostConnectionAttempt : Boolean = true,
-                                   val hostConnectionAttemptTimeout : Duration = Duration(1,TimeUnit.SECONDS)
+                                   val hostConnectionAttemptTimeout : Duration = Duration(1,TimeUnit.SECONDS),
+                                   val waitForMemcachedSet : Boolean = false,
+                                   val setWaitDuration : Duration = Duration(2,TimeUnit.SECONDS)
                                    ) extends Cache[Serializable] {
 
   @volatile private var isEnabled = false
@@ -218,7 +220,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   require(maxCapacity >= 0, "maxCapacity must not be negative")
 
-  private[cache] val store = new ConcurrentLinkedHashMap.Builder[Any, Future[Serializable]]
+  private[cache] val store = new ConcurrentLinkedHashMap.Builder[String, Future[Serializable]]
     .initialCapacity(maxCapacity)
     .maximumWeightedCapacity(maxCapacity)
     .build()
@@ -233,21 +235,25 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   private def getFromDistributedCache(key: String): Option[Future[Serializable]] = {
     try {
-      memcached.get(key) match {
-        case null => {
-          logCacheMiss(key)
-          logger.debug("key {} not found in memcached", key)
-          None
+        memcached.get(key) match {
+          case null => {
+            logCacheMiss(key)
+            logger.debug("key {} not found in memcached", key)
+            None
+          }
+          case o: Object => {
+            logCacheHit(key)
+            logger.debug("key {} found in memcached", key)
+            val p = Promise[Serializable]
+            p.tryComplete(Success(o.asInstanceOf[Serializable]))
+            Some(p.future)
+          }
         }
-        case o: Object => {
-          logCacheHit(key)
-          logger.debug("key {} found in memcached", key)
-          val p = Promise[Serializable]
-          p.tryComplete(Success(o.asInstanceOf[Serializable]))
-          Some(p.future)
-        }
-      }
     } catch {
+      case e : OperationTimeoutException => {
+        logger.error("timeout when retrieving key {} from memcached",key)
+        None
+      }
       case e: Exception => {
         logger.error("Unable to contact memcached", e)
         None
@@ -276,19 +282,20 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   def apply(key: Any, genValue: () => Future[Serializable])(implicit ec: ExecutionContext): Future[Serializable] = {
     // check local whilst computation is occurring cache.
+    logger.info("put requested for {}", key)
     if(!isEnabled) {
       logCacheMiss(key.toString)
       genValue()
     }
     else {
       val keyString = key.toString
-      store.get(key) match {
+      store.get(keyString) match {
         case null => {
           // check memcached.
           getFromDistributedCache(keyString) match {
             case None => {
               val promise = Promise[Serializable]()
-              store.putIfAbsent(key, promise.future) match {
+              store.putIfAbsent(keyString, promise.future) match {
                 case null => {
                   val future = genValue()
                   future.onComplete {
@@ -297,14 +304,27 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                       // Need to check memcached exception here
                       try {
                         if (!value.isFailure) {
-                          memcached.set(key.toString, timeToLive.toSeconds.toInt, value.get)
+                          if( waitForMemcachedSet ) {
+                            val futureSet = memcached.set(keyString, timeToLive.toSeconds.toInt, value.get)
+                            try {
+                              futureSet.get(setWaitDuration.toMillis, TimeUnit.MILLISECONDS)
+                            } catch {
+                              case e: Exception => {
+                                logger.warn("Exception waiting for memcached set to occur")
+                              }
+                            }
+                          } else {
+                            memcached.set(keyString, timeToLive.toSeconds.toInt, value.get)
+                          }
                         }
                       } catch {
                         case e: Exception => {
-
+                           logger.error("problem setting key {} in memcached",key)
                         }
+                      } finally {
+                        store.remove(keyString, promise.future)
                       }
-                      store.remove(key, promise.future)
+
                   }
                   future
                 }
