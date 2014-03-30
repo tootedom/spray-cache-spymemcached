@@ -17,7 +17,6 @@ import net.spy.memcached.ConnectionFactoryBuilder.Protocol
 import org.specs2.runner.JUnitRunner
 import org.junit.runner.RunWith
 
-@RunWith(classOf[JUnitRunner])
 abstract class MemcachedCacheSpec extends Specification {
   implicit val system = ActorSystem()
 

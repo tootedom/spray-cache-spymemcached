@@ -1,7 +1,7 @@
 package org.greencheek.spray.cache.memcached
 
-
 // adds await on the future
+
 import spray.util._
 
 import org.greencheek.util.memcached.{WithMemcached, MemcachedBasedSpec}
@@ -17,7 +17,7 @@ import org.junit.runner.RunWith
  * Created by dominictootell on 30/03/2014.
  */
 @RunWith(classOf[JUnitRunner])
-class MultiMemcachedHostsSpec extends MemcachedBasedSpec {
+class NoMemcachedHostsSpec extends MemcachedBasedSpec {
 
   implicit val system = ActorSystem()
 
@@ -28,16 +28,34 @@ class MultiMemcachedHostsSpec extends MemcachedBasedSpec {
     "can store values when one host is unavailabled" in memcachedContext {
 
       val randomPort = PortUtil.getPort(PortUtil.findFreePort)
-      val hosts = "localhost:"+memcachedContext.memcached.port + ",localhost:"+randomPort
+      val hosts = "localhost:" + randomPort + ",localhost:" + randomPort
 
-      val cache = new MemcachedCache[String] ( memcachedHosts = hosts, protocol = Protocol.TEXT,
-        doHostConnectionAttempt = true)
+      val cache = new MemcachedCache[String](memcachedHosts = hosts, protocol = Protocol.TEXT,
+        doHostConnectionAttempt = true, throwExceptionOnNoHosts = false)
 
+      val myFuture = future {
+        try {
+          Thread.sleep(5000)
+        } catch {
+          case e: Exception => {
+
+          }
+        }
+        "hello there"
+      }
 
       cache("1")("A").await == "A"
       cache("2")("B").await == "B"
 
-      memcachedContext.memcached.daemon.get.getCache.getCurrentItems == 2
+      val request1 = cache("3")(myFuture)
+      val request2 = cache("3")(myFuture)
+      val request3 = cache("3")(myFuture)
+
+      request1.await == "hello there"
+      request2.await == "hello there"
+      request3.await == "hello there"
+
+      memcachedContext.memcached.daemon.get.getCache.getCurrentItems == 0
       memcachedD.daemon.get.getCache.getCurrentItems == 0
 
     }
