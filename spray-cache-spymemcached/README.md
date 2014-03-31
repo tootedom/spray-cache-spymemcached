@@ -1,3 +1,14 @@
+- [Memcached For Spray](#memcached-for-spray)
+	- [Overview](#overview)
+	- [Dependency](#dependency)
+    - [Library Dependencies](#library-dependencies)
+    - [Thundering Herds](#thundering-herds)
+        - [Memcached library, thundering herd, and how does it do it](#memcached-library-thundering-herd-and-how-does-it-do-it)
+    - [Example Uses](#example-uses)
+        - [Specifying the Memcached hosts](#specifying-the-memcached-hosts)
+        - [Specifying the Expiry of Items in memcached](#specifying-the-expiry-of-items-in-memcached)
+        - [Using the Binary or Text Protocol](#using-the-binary-or-text-protocol)
+
 # Memcached For Spray #
 
 This library is an extension of the spray-caching (http://spray.io/documentation/1.2.1/spray-caching/).  It provides
@@ -6,18 +17,20 @@ a memcached backed cache for spray caching.
 ## Overview ##
 
 Uses an internal ConcurrentLinkedHashMap (https://code.google.com/p/concurrentlinkedhashmap/) to provide a storage of
-keys to executing futures.
+keys for which futures are currently pending (i.e. the value is still being calculated).
 
 When the future completes the computed value (which must be a serializable object), is asynchronously stored in memcached.
 At this point the entry is removed from the internal cache; and will only exist in memcached.
 
-Before the value of the future is computed, memcached is checked for a value.  If a pre-existing value is found this is
-returned.
+Before the value of the future is computed, memcached is checked for an existing value.  If a pre-existing value is found
+this value is returned; wrapped in a Promise.
 
-The keys for the cache must have a toString method that represents that object.  Memcached requires string keys, and serialized
-objects.
+The keys for the cache must have a toString method that represents that object.  Memcached requires that:
 
-## Usage ##
+- The key must be a string.
+- The values must be serializable objects
+
+## Dependency ##
 
 The library is availble in maven central, and the dependency is as follows:
 
@@ -27,7 +40,7 @@ The library is availble in maven central, and the dependency is as follows:
       <version>0.0.7</version>
     </dependency>
 
-## Dependencies ##
+## Library Dependencies ##
 
 The library uses the Java Spy Memcached library (https://code.google.com/p/spymemcached/), to communicate with memcached.
 It is compiled against the latest version of spray.  The libraries depedencies are as follows:
@@ -40,7 +53,12 @@ It is compiled against the latest version of spray.  The libraries depedencies a
     [INFO] +- com.twitter:jsr166e:jar:1.1.0:compile
     [INFO] +- org.slf4j:slf4j-api:jar:1.7.6:compile
 
-## Thundering Herd ##
+The akka library is a requirement for spray, and therefore is a `provided` dependency:
+
+    [INFO] +- com.typesafe.akka:akka-actor_2.10:jar:2.3.0:provided
+    [INFO] |  \- com.typesafe:config:jar:1.2.0:provided
+
+## Thundering Herds ##
 
 The spray caching api, isn't quite suited for distributed caching implementations.  The existing LRU (Simple and Expiring),
 store in the cache a future.  As a result you can't really store a future in a distributed cache.  As the future may or may
@@ -122,18 +140,39 @@ The following examples show various ways of constructing the cache, specific to 
 construct arguments:  https://github.com/tootedom/spray-cache-extensions/blob/master/spray-cache-spymemcached/src/main/scala/org/greencheek/spray/cache/memcached/MemcachedCache.scala#L149
 
 
-## Specifying the Memcached hosts ##
+### Specifying the Memcached hosts ###
 
 The hosts are specified in a comma separated list.  The default setting is `localhost:11211`.  If the port isn't supplied
 the default `11211` is used
 
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211")
 
-## Specifying the Expiry of Items in memcached ##
+### Specifying the Expiry of Items in memcached ###
 
 When items are added to memcached, they will have an expiry in seconds (release 0.0.8 will allow for infinite duration):
 
-    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211"),
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
                                                           timeToLive = Duration(10,TimeUnit.MINUTES))
 
+
+### Using the Binary or Text Protocol ###
+
+When talking to memcached you can either use the TEXT or BINARY protocol.  The Binary protocol is used by default.  The
+following shows how to configure either:
+
+
+    import net.spy.memcached.ConnectionFactoryBuilder.Protocol
+
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                          protocol = Protocol.BINARY)
+
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                          protocol = Protocol.TEXT)
+
+
+## Specifying GET Timeout ##
+
+When querying memcached, there is a timeout associated with that get request; otherwise the GET from memcache would block
+the caller.  As a result there is a default timeout when memcached is queried.  This is `Duration(2500,TimeUnit.MILLISECONDS)`,
+in other words `2.5 seconds`.
 
