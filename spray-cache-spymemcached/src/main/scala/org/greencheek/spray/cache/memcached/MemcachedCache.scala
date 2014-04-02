@@ -15,6 +15,7 @@ import net.spy.memcached.transcoders.Transcoder
 import org.greencheek.spy.extensions.SerializingTranscoder
 import org.greencheek.dns.lookup.{TCPAddressChecker, AddressChecker, LookupService}
 import scala.collection.JavaConversions._
+import scala.annotation.switch
 
 /*
  * Created by dominictootell on 26/03/2014.
@@ -25,6 +26,7 @@ object MemcachedCache {
   private val DEFAULT_MEMCACHED_PORT : Int = 11211
   private val DEFAULT_DNS_TIMEOUT : Duration = Duration(3,TimeUnit.SECONDS)
   private val DEFAULT_CAPACITY = 1000
+  private val ONE_SECOND = Duration(1,TimeUnit.SECONDS)
 
 
   private def validateMemcacheHosts(checkTimeout : Duration,
@@ -58,21 +60,19 @@ object MemcachedCache {
 
     var workingNodes: List[InetSocketAddress] = Nil
     for (hostAndPort <- nodes) {
-      val host: String = hostAndPort._1
-      val port: Int = hostAndPort._2
-      var ia: InetAddress = null
       var future: java.util.concurrent.Future[InetAddress] = null
+      val host = hostAndPort._1
+      val port = hostAndPort._2
       try {
         future = addressLookupService.getByName(host)
-        ia = future.get(dnsLookupTimeout.toSeconds, TimeUnit.SECONDS)
+        var ia: InetAddress = future.get(dnsLookupTimeout.toSeconds, TimeUnit.SECONDS)
         if (ia == null) {
           logger.error("Unable to resolve dns entry for the host: {}", host)
         }
         else
         {
-          var address: InetSocketAddress = null
           try {
-            workingNodes = new InetSocketAddress(ia, port) :: workingNodes
+            workingNodes = new InetSocketAddress(ia,port ) :: workingNodes
           }
           catch {
             case e: IllegalArgumentException => {
@@ -80,7 +80,6 @@ object MemcachedCache {
             }
           }
         }
-
       }
       catch {
         case e: TimeoutException => {
@@ -94,10 +93,9 @@ object MemcachedCache {
         if (future != null) future.cancel(true)
       }
     }
-
     addressLookupService.shutdown()
 
-    return workingNodes
+    workingNodes
   }
 
   /**
@@ -116,13 +114,14 @@ object MemcachedCache {
     var memcachedNodes : List[(String,Int)] = Nil
     for (url <- hostUrls.split(",")) {
       var port: Int = DEFAULT_MEMCACHED_PORT
-      var host: String = null
-      val indexOfPort: Int = url.indexOf(':')
-      if (indexOfPort == -1) {
-        host = url.trim
-      }
-      else {
-        host = url.substring(0, indexOfPort).trim
+      val indexOfPort = url.indexOf(':')
+      val host =  indexOfPort match {
+        case -1 => {
+          url.trim
+        }
+        case any => {
+          url.substring(0, any).trim
+        }
       }
 
       try {
@@ -247,9 +246,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
           case o: Object => {
             logCacheHit(key)
             logger.debug("key {} found in memcached", key)
-            val p = Promise[Serializable]
-            p.tryComplete(Success(o.asInstanceOf[Serializable]))
-            Some(p.future)
+            Some(Promise.successful(o.asInstanceOf[Serializable]).future)
           }
         }
     } catch {
@@ -260,6 +257,35 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       case e: Exception => {
         logger.error("Unable to contact memcached", e)
         None
+      }
+    }
+  }
+
+  private def writeToDistributedCache(key: String, value : Serializable, timeToLive : Duration) : Unit = {
+    val entryTTL : Duration = timeToLive match {
+      case Duration.Inf => Duration.Zero
+      case Duration.MinusInf => Duration.Zero
+      case Duration.Zero => Duration.Zero
+      case x if x.lt(MemcachedCache.ONE_SECOND) => Duration.Zero
+      case _  => timeToLive
+    }
+
+    if( waitForMemcachedSet ) {
+      val futureSet = memcached.set(key, entryTTL.toSeconds.toInt, value)
+      try {
+        futureSet.get(setWaitDuration.toMillis, TimeUnit.MILLISECONDS)
+      } catch {
+        case e: Exception => {
+          logger.warn("Exception waiting for memcached set to occur")
+        }
+      }
+    } else {
+      try {
+        memcached.set(key, entryTTL.toSeconds.toInt, value)
+      } catch {
+        case e: Exception => {
+          logger.warn("Exception waiting for memcached set to occur")
+        }
       }
     }
   }
@@ -283,15 +309,30 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     }
   }
 
-  def apply(key: Any, genValue: () => Future[Serializable])(implicit ec: ExecutionContext): Future[Serializable] = {
+
+  override def apply(key: Any,genValue: () => Future[Serializable])(implicit ec: ExecutionContext): Future[Serializable] = {
+    key match {
+      case x: (_, _) if x._1.isInstanceOf[Duration] => {
+        apply(x._1.asInstanceOf[Duration],x._2,genValue)
+      }
+      case x : (_,_) if x._2.isInstanceOf[Duration] => {
+        apply(x._2.asInstanceOf[Duration],x._1,genValue)
+      }
+      case _ => {
+        apply(timeToLive,key,genValue)
+      }
+    }
+  }
+
+  def apply(itemExpiry : Duration, key : Any, genValue: () => Future[Serializable])(implicit ec: ExecutionContext): Future[Serializable] = {
     // check local whilst computation is occurring cache.
-    logger.info("put requested for {}", key)
+    val keyString = key.toString
+    logger.info("put requested for {}", keyString)
     if(!isEnabled) {
-      logCacheMiss(key.toString)
+      logCacheMiss(keyString)
       genValue()
     }
     else {
-      val keyString = key.toString
       store.get(keyString) match {
         case null => {
           // check memcached.
@@ -307,18 +348,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                       // Need to check memcached exception here
                       try {
                         if (!value.isFailure) {
-                          if( waitForMemcachedSet ) {
-                            val futureSet = memcached.set(keyString, timeToLive.toSeconds.toInt, value.get)
-                            try {
-                              futureSet.get(setWaitDuration.toMillis, TimeUnit.MILLISECONDS)
-                            } catch {
-                              case e: Exception => {
-                                logger.warn("Exception waiting for memcached set to occur")
-                              }
-                            }
-                          } else {
-                            memcached.set(keyString, timeToLive.toSeconds.toInt, value.get)
-                          }
+                          writeToDistributedCache(keyString,value.get,itemExpiry)
                         }
                       } catch {
                         case e: Exception => {
@@ -349,13 +379,18 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     }
   }
 
+
+
   def remove(key: Any) = {
     if(!isEnabled) {
       None
     }
     else {
       val keyString: String = key.toString
-      val removedFuture: Option[Future[Serializable]] = Some(store.remove(keyString))
+      val removedFuture: Option[Future[Serializable]] = store.remove(keyString) match {
+        case null => None
+        case x => Some(x)
+      }
 
       val memcachedRemovedFuture = getFromDistributedCache(keyString) match {
         case None => {

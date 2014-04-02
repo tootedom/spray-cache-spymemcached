@@ -17,6 +17,7 @@
         <jsr666e.version>1.1.0</jsr666e.version>
         <slf4j.version>1.7.6</slf4j.version>
         <memcachedtest.version>1.0.0</memcachedtest.version>
+        <finaglememcached.version>6.13.1</finaglememcached.version>
     </properties>
 
     <dependencies>
@@ -49,5 +50,11 @@
             <version>${logback.version}</version>
             <scope>test</scope>
         </dependency>
+        <!--<dependency>-->
+            <!--<groupId>com.twitter</groupId>-->
+            <!--<artifactId>finagle-memcached_2.10</artifactId>-->
+            <!--<version>${finaglememcached.version}</version>-->
+            <!--<scope>test</scope>-->
+        <!--</dependency>-->
     </dependencies>
 </project>

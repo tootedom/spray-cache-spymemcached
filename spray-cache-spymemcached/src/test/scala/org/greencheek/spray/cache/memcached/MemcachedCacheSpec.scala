@@ -93,7 +93,7 @@ abstract class MemcachedCacheSpec extends Specification {
       cache.get("35").get.await == "hello"
       cache.get("45").get.await == "hello2"
 
-      memcachedContext.memcached.daemon.get.getCache.getCurrentItems == 2
+      memcachedContext.memcached.daemon.size == 2
 
       true
     }
@@ -111,7 +111,7 @@ abstract class MemcachedCacheSpec extends Specification {
       cache.get(500).get.await == "F"
       cache.get(900) == None
 
-      memcachedContext.memcached.daemon.get.getCache.getCurrentItems == 5
+      memcachedContext.memcached.daemon.size == 5
 
       true
     }
@@ -145,7 +145,7 @@ abstract class MemcachedCacheSpec extends Specification {
       cache(167)("A").await === "A"
     }
     "remove items from the cache" in memcachedContext{
-      val cache = memcachedCache[String]("localhost:"+memcachedContext.memcached.port,binary = false,waitForMemcachedRemove = true)
+      val cache = memcachedCache[String](getMemcachedHostsString.getOrElse("localhost:"+memcachedContext.memcached.port),binary = memcachedContext.binary,waitForMemcachedRemove = true)
 
       cache(144)("A").await === "A"
 
@@ -173,15 +173,6 @@ abstract class MemcachedCacheSpec extends Specification {
 
 
     }
-
-//    "refresh an entries expiration time on cache hit" in {
-//      val cache = lruCache[String]()
-//      cache(1)("A").await === "A"
-//      cache(2)("B").await === "B"
-//      cache(3)("C").await === "C"
-//      cache(1)("").await === "A" // refresh
-//      cache.store.toString === "{2=B, 1=A, 3=C}"
-//    }
 
   }
 

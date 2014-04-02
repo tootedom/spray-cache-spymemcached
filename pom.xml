@@ -94,6 +94,10 @@
                 <enabled>true</enabled>
             </snapshots>
         </repository>
+        <repository>
+            <id>twitter-twttr</id>
+            <url>http://maven.twttr.com/</url>
+        </repository>
     </repositories>
     <pluginRepositories>
         <pluginRepository>

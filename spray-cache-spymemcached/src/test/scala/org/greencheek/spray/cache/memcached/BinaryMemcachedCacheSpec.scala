@@ -10,6 +10,10 @@ import org.junit.runner.RunWith
 // jmemcache binary protocol does not play nice with spy
 // Therefore this class does not have the JUnit runner on it.
 // But can be run manually from a ide
+//
+// memcached-finagle doesn't do binary memcached
+//
+//@RunWith(classOf[JUnitRunner])
 class BinaryMemcachedCacheSpec extends MemcachedCacheSpec{
   override def getMemcacheContext(): WithMemcached = WithMemcached(true)
   override def getMemcachedHostsString() : Option[String]  = { Some("localhost:11211") }

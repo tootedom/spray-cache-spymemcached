@@ -58,8 +58,9 @@ class NoMemcachedHostsSpec extends MemcachedBasedSpec {
       request2.await == "hello there"
       request3.await == "hello there"
 
-      memcachedContext.memcached.daemon.get.getCache.getCurrentItems == 0
-      memcachedD.daemon.get.getCache.getCurrentItems == 0
+      memcachedContext.memcached.size === 0
+      memcachedD.size === 0
+
 
     }
   }
@@ -89,8 +90,9 @@ class NoMemcachedHostsSpec extends MemcachedBasedSpec {
     request2.await == "hello there"
     request3.await == "hello there"
 
-    memcachedContext.memcached.daemon.get.getCache.getCurrentItems == 0
-    memcachedD.daemon.get.getCache.getCurrentItems == 0
+    memcachedContext.memcached.size === 0
+    memcachedD.size === 0
+
 
   }
   "is invasive when requested" in {
@@ -147,8 +149,8 @@ class NoMemcachedHostsSpec extends MemcachedBasedSpec {
     request2.await == "hello there"
     request3.await == "hello there"
 
-    memcachedContext.memcached.daemon.get.getCache.getCurrentItems == 0
-    memcachedD.daemon.get.getCache.getCurrentItems == 0
+    memcachedContext.memcached.size === 0
+    memcachedD.size === 0
 
   }
 
