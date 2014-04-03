@@ -251,6 +251,17 @@ As mentioned previously memcached uses `String` keys, and values are binary obje
             timeToLive = Duration(5,TimeUnit.SECONDS),waitForMemcachedSet = true)
 
 
+    val madoff = new MyCase("Madoff")
+    val victim = new MyCase("actorX")
+
+    cache("PonziScheme")(madoff).await === madoff
+    // Wait for a bit.. item is still cached (5 second expiry)
+
+    Thread.sleep(2000)
+    cache.get("PonziScheme") must beSome
+    cache.get("PonziScheme").get.await === madoff
+
+    // Use the expensive operation method, this returns as it's in memcached
     cachedOp(cache,"PonziScheme").await === madoff
     cachedOp(cache,"PonziScheme").await !== victim
 
