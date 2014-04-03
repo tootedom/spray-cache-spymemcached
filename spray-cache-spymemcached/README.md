@@ -9,6 +9,8 @@
         - [Specifying the Expiry of Items in memcached](#specifying-the-expiry-of-items-in-memcached)
         - [Using the Binary or Text Protocol](#using-the-binary-or-text-protocol)
 
+----
+
 # Memcached For Spray #
 
 This library is an extension of the spray-caching (http://spray.io/documentation/1.2.1/spray-caching/).  It provides
@@ -30,6 +32,8 @@ The keys for the cache must have a toString method that represents that object. 
 - The key must be a string.
 - The values must be serializable objects
 
+----
+
 ## Dependency ##
 
 The library is availble in maven central, and the dependency is as follows:
@@ -39,6 +43,9 @@ The library is availble in maven central, and the dependency is as follows:
       <artifactId>spray-cache-spymemcached</artifactId>
       <version>0.1.0</version>
     </dependency>
+
+The library was build using scala 2.10.x.  It has not be tested with scala 2.9.x.  Therefore, consider it only compatible
+with 2.10.x
 
 ## Library Dependencies ##
 
@@ -57,6 +64,8 @@ The akka library is a requirement for spray, and therefore is a `provided` depen
 
     [INFO] +- com.typesafe.akka:akka-actor_2.10:jar:2.3.0:provided
     [INFO] |  \- com.typesafe:config:jar:1.2.0:provided
+
+----
 
 ## Thundering Herds ##
 
@@ -109,6 +118,8 @@ the memcached cached requesting this.  The follow will wait for the memcached se
                                waitForMemcachedSet = true,
                                setWaitDuration = Duration(1,TimeUnit.SECONDS))
 
+----
+
 ## Example Uses ##
 
 The use of spray-cache-memcached is really not different to that of the documentation examples on the
@@ -139,6 +150,17 @@ by that of memcached:
 The following examples show various ways of constructing the cache, specific to memcached.  Please see the source for
 construct arguments:  https://github.com/tootedom/spray-cache-extensions/blob/master/spray-cache-spymemcached/src/main/scala/org/greencheek/spray/cache/memcached/MemcachedCache.scala#L149
 
+----
+
+## Configuration/Usage Examples ##
+
+The below will give a couple of example code snippets for using, and configuring the cache for various scenarios:
+
+- The hosts to connect to
+- The expiry of items
+- The timeout of a get request
+
+----
 
 ### Specifying the Memcached hosts ###
 
@@ -147,6 +169,9 @@ the default `11211` is used
 
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211")
 
+
+----
+
 ### Specifying the Expiry of Items in memcached ###
 
 When items are added to memcached, they will have an expiry in seconds:
@@ -154,6 +179,43 @@ When items are added to memcached, they will have an expiry in seconds:
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
                                                           timeToLive = Duration(10,TimeUnit.MINUTES))
 
+
+### Specifying the Expiry of a single Item ###
+
+By default when you add an item to the cache, it will be given a default expiry, or the expiry you have set the cache to
+having in the cache constructor.
+
+    val cache = new MemcachedCache[String] ( memcachedHosts = hosts, protocol = Protocol.TEXT,
+                                             timeToLive = Duration(5,TimeUnit.SECONDS),waitForMemcachedSet = true)
+
+
+    cache("2")("F")
+
+The item "2", will be given an expiry of 5 seconds.  All items add to the above cache will have a expiry of 5 seconds.
+The spray `Cache` interface does not allow the adding of specific items, with specific timeouts.
+
+Therefore an additional method has been added to the `MemcachedCache[Serializable]` class to allow this.  Therefore, your
+cache `val` has to be typed to `MemcachedCache` and not `Cache`.
+
+Here is an example of setting a per item expiry:
+
+    val cache = new MemcachedCache[String] ( memcachedHosts = hosts, protocol = Protocol.TEXT,
+        timeToLive = Duration(5,TimeUnit.SECONDS),waitForMemcachedSet = true)
+
+    val x = Duration(1,TimeUnit.SECONDS)
+    cache( ("1",x) )("A")
+
+In the above the "Key" is specified in a tuple, along with a Duration, i.e. `Tuple2[Any,Duration]`.  It can also be used
+in the opposite: `Tuple2[Duration,Any]`:
+
+    cache( (Duration.Inf,"3") )("E")
+
+### No Expiry ###
+
+To have items never expire, you can use `Duration.Inf`, `Duration.Zero` or any duration that is less than
+`Duration(1,TimeUnit.SECONDS)`
+
+----
 
 ### Using the Binary or Text Protocol ###
 
@@ -169,10 +231,35 @@ following shows how to configure either:
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
                                                           protocol = Protocol.TEXT)
 
+----
 
-## Specifying GET Timeout ##
+### Specifying GET Timeout ###
 
 When querying memcached, there is a timeout associated with that get request; otherwise the GET from memcache would block
 the caller.  As a result there is a default timeout when memcached is queried.  This is `Duration(2500,TimeUnit.MILLISECONDS)`,
 in other words `2.5 seconds`.
 
+----
+
+### Caching Serializable Objects ###
+
+As mentioned previously memcached uses `String` keys, and values are binary objects (i.e. Object must be `Serializable`).
+
+    case class MyCase(val name : String,val millis : Long = System.currentTimeMillis())
+
+    val cache = new MemcachedCache[Serializable] ( memcachedHosts = hosts, protocol = Protocol.TEXT,
+            timeToLive = Duration(5,TimeUnit.SECONDS),waitForMemcachedSet = true)
+
+
+    cachedOp(cache,"PonziScheme").await === madoff
+    cachedOp(cache,"PonziScheme").await !== victim
+
+    // if we have an "expensive" operation
+    def expensiveOp(name : String = "Madoff"): MyCase = {
+      Thread.sleep(500)
+      new MyCase(name)
+    }
+
+    def cachedOp[T](cache : Cache[Serializable],key: T): Future[Serializable] = cache(key) {
+      expensiveOp()
+    }
