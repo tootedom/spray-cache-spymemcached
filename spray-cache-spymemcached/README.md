@@ -37,7 +37,7 @@ The library is availble in maven central, and the dependency is as follows:
     <dependency>
       <groupId>org.greencheek.spray</groupId>
       <artifactId>spray-cache-spymemcached</artifactId>
-      <version>0.0.7</version>
+      <version>0.1.0</version>
     </dependency>
 
 ## Library Dependencies ##
@@ -149,7 +149,7 @@ the default `11211` is used
 
 ### Specifying the Expiry of Items in memcached ###
 
-When items are added to memcached, they will have an expiry in seconds (release 0.0.8 will allow for infinite duration):
+When items are added to memcached, they will have an expiry in seconds:
 
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
                                                           timeToLive = Duration(10,TimeUnit.MINUTES))
