@@ -1,7 +1,3 @@
-/*
- *
- *
- */
 
 package org.greencheek.util;
 

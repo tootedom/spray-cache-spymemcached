@@ -16,6 +16,8 @@ import org.greencheek.spy.extensions.SerializingTranscoder
 import org.greencheek.dns.lookup.{TCPAddressChecker, AddressChecker, LookupService}
 import scala.collection.JavaConversions._
 import scala.annotation.switch
+import org.greencheek.spray.cache.memcached.keyhashing._
+import scala.Some
 
 /*
  * Created by dominictootell on 26/03/2014.
@@ -163,8 +165,8 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val setWaitDuration : Duration = Duration(2,TimeUnit.SECONDS),
                                    val allowFlush : Boolean = false,
                                    val waitForMemcachedRemove : Boolean = false,
-                                   val removeWaitDuration : Duration = Duration(2,TimeUnit.SECONDS)
-                                   ) extends Cache[Serializable] {
+                                   val removeWaitDuration : Duration = Duration(2,TimeUnit.SECONDS),
+                                   val keyHashType : KeyHashType = NoKeyHash) extends Cache[Serializable] {
 
   @volatile private var isEnabled = false
   @volatile private var memcached: MemcachedClientIF = null;
@@ -226,6 +228,18 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     .initialCapacity(maxCapacity)
     .maximumWeightedCapacity(maxCapacity)
     .build()
+
+  private val keyHashingFunction : KeyHashing = keyHashType match {
+    case MD5KeyHash => new MD5DigestKeyHashing()
+    case SHA256KeyHash => new SHA256DigestKeyHashing()
+    case NoKeyHash => NoKeyHashing.INSTANCE
+    case _ => NoKeyHashing.INSTANCE
+
+  }
+
+  private def getHashedKey(key : String) : String = {
+    keyHashingFunction.hashKey(key)
+  }
 
   private def logCacheHit(key: String): Unit = {
     cachedHitMissLogger.debug("{ \"cachehit\" : \"{}\"}",key)
@@ -291,17 +305,16 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   }
 
   def get(key: Any): Option[Future[Serializable]] = {
+    val keyString : String = getHashedKey(key.toString)
     if(!isEnabled) {
-      logCacheMiss(key.toString)
+      logCacheMiss(keyString)
       None
     } else {
-      store.get(key) match {
+      store.get(keyString) match {
         case null => {
-          val keyString: String = key.toString
           getFromDistributedCache(keyString)
         }
         case existing => {
-          val keyString: String = key.toString
           logCacheHit(keyString)
           Some(existing)
         }
@@ -326,7 +339,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   def apply(itemExpiry : Duration, key : Any, genValue: () => Future[Serializable])(implicit ec: ExecutionContext): Future[Serializable] = {
     // check local whilst computation is occurring cache.
-    val keyString = key.toString
+    val keyString = getHashedKey(key.toString)
     logger.info("put requested for {}", keyString)
     if(!isEnabled) {
       logCacheMiss(keyString)
@@ -386,7 +399,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       None
     }
     else {
-      val keyString: String = key.toString
+      val keyString: String = getHashedKey(key.toString)
       val removedFuture: Option[Future[Serializable]] = store.remove(keyString) match {
         case null => None
         case x => Some(x)
