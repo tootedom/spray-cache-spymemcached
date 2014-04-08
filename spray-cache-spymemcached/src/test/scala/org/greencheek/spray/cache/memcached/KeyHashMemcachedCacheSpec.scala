@@ -77,16 +77,16 @@ class KeyHashMemcachedCacheSpec extends MemcachedBasedSpec {
 
       cache.get("1 space 1").get.await === "A"
     }
-    "no hash cannot have a key with a space in it" in memcachedContext {
+    "key with no hashing cannot have a key with a linefeed/return in it" in memcachedContext {
       val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
         waitForMemcachedSet = true, allowFlush = false, keyHashType = NoKeyHash)
 
-      cache("1 space 1")("A").await === "A"
-      cache("1 space 1")("B").await === "B"
+      cache("1space1\r\n2to2")("A").await === "A"
+      cache("1space1\r\n2to2")("B").await === "B"
 
-      cache.get("1 space 1") must beNone
+      cache.get("1space1\r\n2to2") must beNone
     }
-    "no hash cannot have a key with a space in it" in memcachedContext {
+    "key with no hashing cannot have a key with a space in it" in memcachedContext {
       val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
         waitForMemcachedSet = true, allowFlush = false, keyHashType = null)
 
@@ -94,6 +94,24 @@ class KeyHashMemcachedCacheSpec extends MemcachedBasedSpec {
       cache("1 space 1")("B").await === "B"
 
       cache.get("1 space 1") must beNone
+    }
+    "key with no hashing can have a key with a space in it for binary client" in memcachedContext {
+      val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.BINARY,
+        waitForMemcachedSet = true, allowFlush = false, keyHashType = null)
+
+      cache("1 space 1")("A").await === "A"
+      cache("1 space 1")("B").await === "A"
+
+      cache.get("1 space 1") must beSome
+    }
+    "key with no hashing can have a key with a space and linefeed in it for binary client" in memcachedContext {
+      val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.BINARY,
+        waitForMemcachedSet = true, allowFlush = false, keyHashType = null)
+
+      cache("1 space 1\r\n2 to 2")("A").await === "A"
+      cache("1 space 1\r\n2 to 2")("B").await === "A"
+
+      cache.get("1 space 1\r\n2 to 2") must beSome
     }
   }
 }

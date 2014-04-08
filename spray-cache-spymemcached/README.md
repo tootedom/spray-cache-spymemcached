@@ -7,8 +7,13 @@
     - [Example Uses](#example-uses)
         - [Specifying the Memcached hosts](#specifying-the-memcached-hosts)
         - [Specifying the Expiry of Items in memcached](#specifying-the-expiry-of-items-in-memcached)
+        - [Specifying the Expiry of a single Item](#specifying-the-expiry-of-a-single-item)
+        - [No Expiry](#no-expiry)
         - [Using the Binary or Text Protocol](#using-the-binary-or-text-protocol)
-
+        - [Cache Key](#cache-key)
+        - [Specifying GET Timeout](#specifying-get-timeout)
+        - [Consistent Hashing](#consistent-hashing)
+        - [Caching Serializable Objects](#caching-serializable-objects)
 ----
 
 # Memcached For Spray #
@@ -41,7 +46,7 @@ The library is availble in maven central, and the dependency is as follows:
     <dependency>
       <groupId>org.greencheek.spray</groupId>
       <artifactId>spray-cache-spymemcached</artifactId>
-      <version>0.1.0</version>
+      <version>0.1.6</version>
     </dependency>
 
 The library was build using scala 2.10.x.  It has not be tested with scala 2.9.x.  Therefore, consider it only compatible
@@ -215,6 +220,9 @@ in the opposite: `Tuple2[Duration,Any]`:
 To have items never expire, you can use `Duration.Inf`, `Duration.Zero` or any duration that is less than
 `Duration(1,TimeUnit.SECONDS)`
 
+    val cache = new MemcachedCache[String] ( memcachedHosts = hosts, protocol = Protocol.TEXT,
+                                             timeToLive = Duration.Inf,waitForMemcachedSet = true)
+
 ----
 
 ### Using the Binary or Text Protocol ###
@@ -233,11 +241,71 @@ following shows how to configure either:
 
 ----
 
+### Cache Key ###
+
+The cache key has to have a `toString` method.  `Memcached` has a requirement for makeup of keys, when using the TEXT
+protocol, such that your `toString` method on your key object must conform to the following requirements.
+
+- Need to be a string
+- cannot contain ' '(space), '\r'(return), '\n'(linefeed)
+
+If you are using the BINARY protocol these requirements do not apply.  However, you may wish to perform hashing of the
+string representing the key to allow for any character to be used.  The library (`as of 0.1.6`), has the ability for a couple
+of hash representations of the key:
+
+- SHA256
+- MD5
+
+To used either of these you need to specify the hashing method to be used at cache construction time:
+
+- MD5:
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                              protocol = Protocol.TEXT, keyHashType = MD5KeyHash)
+
+- SHA256:
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                                  protocol = Protocol.TEXT, keyHashType = SHA256KeyHash)
+
+- No Hashing (default)
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                                  protocol = Protocol.TEXT, keyHashType = NoKeyHash)
+
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                                  protocol = Protocol.TEXT, keyHashType = null)
+
+
+
+
+----
+
 ### Specifying GET Timeout ###
 
-When querying memcached, there is a timeout associated with that get request; otherwise the GET from memcache would block
+When querying memcached, there is a timeout associated with the get request; otherwise the GET from memcache would block
 the caller.  As a result there is a default timeout when memcached is queried.  This is `Duration(2500,TimeUnit.MILLISECONDS)`,
-in other words `2.5 seconds`.
+in other words `2.5 seconds`.  This is the default that is supplied with the SPY memcached library being used to talk to
+memcached.
+
+To change the length of time to wait/block on the get, you need to specify the `Duration` to wait at construction time
+
+memcachedGetTimeout
+
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                          protocol = Protocol.TEXT, keyHashType = SHA256KeyHash,
+                                                          memcachedGetTimeout = Duration(1,TimeUnit.SECONDS))
+
+----
+
+### Consistent Hashing ###
+
+By default the library uses ketama consistent hashing to distribute (shard) the puts across the memcached hosts.
+(http://www.last.fm/user/RJ/journal/2007/04/10/rz_libketama_-_a_consistent_hashing_algo_for_memcache_clients).
+The spy memcached library provides a number of hashing algorithms
+(https://github.com/couchbase/spymemcached/blob/master/src/main/java/net/spy/memcached/DefaultHashAlgorithm.java).
+However, if you have no reason to use a different hashing algorithm; you are best of sticking with the default of ketama.
+
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                          protocol = Protocol.TEXT, keyHashType = SHA256KeyHash,
+                                                          hashAlgorithm = DefaultHashAlgorithm.KETAMA_HASH
 
 ----
 
