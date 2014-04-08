@@ -14,6 +14,7 @@
         - [Specifying GET Timeout](#specifying-get-timeout)
         - [Consistent Hashing](#consistent-hashing)
         - [Caching Serializable Objects](#caching-serializable-objects)
+
 ----
 
 # Memcached For Spray #
