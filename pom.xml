@@ -3,7 +3,7 @@
     <groupId>org.greencheek.spray</groupId>
     <artifactId>spray-cache-extensions</artifactId>
     <packaging>pom</packaging>
-    <version>0.1.6</version>
+    <version>0.1.7-SNAPSHOT</version>
     <inceptionYear>2014</inceptionYear>
     <name>spray-caching-extensions</name>
     <description>A Couple of Caching Extensions for Spray</description>
@@ -35,7 +35,7 @@
         <connection>scm:git:git@github.com:tootedom/spray-cache-extensions.git</connection>
         <url>scm:git:git@github.com:tootedom/spray-cache-extensions.git</url>
         <developerConnection>scm:git:git@github.com:tootedom/spray-cache-extensions.git</developerConnection>
-        <tag>spray-cache-extensions-0.1.6</tag>
+        <tag>spray-cache-extensions-0.1.2</tag>
     </scm>
     <properties>
         <header.basedir>${project.basedir}</header.basedir>
