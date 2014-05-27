@@ -259,17 +259,35 @@ of hash representations of the key:
 
 To used either of these you need to specify the hashing method to be used at cache construction time:
 
-- MD5:
+#### MD5 ####
+
+To use UPPERCASE md5
 
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
-                                                              protocol = Protocol.TEXT, keyHashType = MD5KeyHash)
+                                                          protocol = Protocol.TEXT, keyHashType = MD5KeyHash)
 
-- SHA256:
+To use lowercase md5
 
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
-                                                                  protocol = Protocol.TEXT, keyHashType = SHA256KeyHash)
+                                                          protocol = Protocol.TEXT, keyHashType = MD5LowerKeyHash)
 
-- No Hashing (default)
+
+#### SHA256 ####
+
+to use UPPERCASE sha256
+
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                          protocol = Protocol.TEXT, keyHashType = SHA256KeyHash)
+                                                                  
+to use lowercase sha256
+
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                          protocol = Protocol.TEXT, keyHashType = SHA256LowerKeyHash)
+
+#### No Hashing (default) ####
+
+The default is to use no hashing of the key (i.e. it just uses the toString) value.  As mentioned previously this is 
+restrictive in size and characters, when using the TEXT protocol.  
 
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
                                                                   protocol = Protocol.TEXT, keyHashType = NoKeyHash)
