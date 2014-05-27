@@ -13,7 +13,7 @@
     </parent>
     <properties>
         <header.basedir>${project.parent.basedir}</header.basedir>
-        <spy.version>2.10.6</spy.version>
+        <spy.version>2.11.2</spy.version>
         <jsr666e.version>1.1.0</jsr666e.version>
         <slf4j.version>1.7.6</slf4j.version>
         <memcachedtest.version>1.0.0</memcachedtest.version>
