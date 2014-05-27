@@ -24,8 +24,8 @@ object DigestKeyHashing {
     val out = new Array[Char](length << 1);
     for (i <- 0 until length
          ) {
-      out(i+i) = DIGITS_LOWER((0xF0 & data(i)) >>> 4);
-      out(i+i+1) = DIGITS_LOWER(0x0F & data(i));
+      out(i+i) = chars((0xF0 & data(i)) >>> 4);
+      out(i+i+1) = chars(0x0F & data(i));
     }
     new String(out);
   }

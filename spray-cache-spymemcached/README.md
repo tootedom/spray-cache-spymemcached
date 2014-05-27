@@ -260,14 +260,17 @@ of hash representations of the key:
 To used either of these you need to specify the hashing method to be used at cache construction time:
 
 - MD5:
+
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
                                                               protocol = Protocol.TEXT, keyHashType = MD5KeyHash)
 
 - SHA256:
+
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
                                                                   protocol = Protocol.TEXT, keyHashType = SHA256KeyHash)
 
 - No Hashing (default)
+
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
                                                                   protocol = Protocol.TEXT, keyHashType = NoKeyHash)
 

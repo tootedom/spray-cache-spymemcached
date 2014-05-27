@@ -230,8 +230,10 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     .build()
 
   private val keyHashingFunction : KeyHashing = keyHashType match {
-    case MD5KeyHash => new MD5DigestKeyHashing()
-    case SHA256KeyHash => new SHA256DigestKeyHashing()
+    case MD5KeyHash | MD5UpperKeyHash => new MD5DigestKeyHashing()
+    case SHA256KeyHash | SHA256UpperKeyHash => new SHA256DigestKeyHashing()
+    case MD5LowerKeyHash => new MD5DigestKeyHashing(upperCase = false)
+    case SHA256LowerKeyHash => new SHA256DigestKeyHashing(upperCase = false)
     case NoKeyHash => NoKeyHashing.INSTANCE
     case _ => NoKeyHashing.INSTANCE
 
