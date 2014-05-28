@@ -3,7 +3,7 @@
     <groupId>org.greencheek.spray</groupId>
     <artifactId>spray-cache-extensions</artifactId>
     <packaging>pom</packaging>
-    <version>0.1.7-SNAPSHOT</version>
+    <version>0.1.7</version>
     <inceptionYear>2014</inceptionYear>
     <name>spray-caching-extensions</name>
     <description>A Couple of Caching Extensions for Spray</description>
@@ -35,7 +35,7 @@
         <connection>scm:git:git@github.com:tootedom/spray-cache-extensions.git</connection>
         <url>scm:git:git@github.com:tootedom/spray-cache-extensions.git</url>
         <developerConnection>scm:git:git@github.com:tootedom/spray-cache-extensions.git</developerConnection>
-        <tag>spray-cache-extensions-0.1.2</tag>
+        <tag>spray-cache-extensions-0.1.7</tag>
     </scm>
     <properties>
         <header.basedir>${project.basedir}</header.basedir>
@@ -248,7 +248,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.8.1</version>
+                <version>2.9.1</version>
                 <configuration>
                     <useStandardDocletOptions>true</useStandardDocletOptions>
                     <show>public</show>
@@ -259,9 +259,11 @@
                     <version>true</version>
                     <author>true</author>
                     <keywords>true</keywords>
+                    <maxmemory>512m</maxmemory>
                     <links>
                         <link>http://docs.oracle.com/javase/6/docs/api/</link>
                     </links>
+                    <additionalJOption>-J-XX:MaxPermSize=256m</additionalJOption>
                 </configuration>
                 <executions>
                     <execution>
@@ -286,7 +288,7 @@
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
                     <!-- Sets the VM argument line used when unit tests are run. -->
-                    <argLine>${surefireArgLine}</argLine>
+                    <argLine>-Xmx1024m ${surefireArgLine}</argLine>
                     <useFile>false</useFile>
                     <includes>
                         <include>**/*Spec.*</include>
@@ -319,8 +321,9 @@
                                 <arg>-language:postfixOps</arg>
                             </args>
                             <jvmArgs>
-                                <jvmArg>-Xms64m</jvmArg>
+                                <jvmArg>-Xms256m</jvmArg>
                                 <jvmArg>-Xmx1024m</jvmArg>
+                                <jvmArg>-XX:MaxPermSize=512m</jvmArg>
                             </jvmArgs>
                         </configuration>
                     </execution>
@@ -342,8 +345,9 @@
                                 <arg>-language:postfixOps</arg>
                             </args>
                             <jvmArgs>
-                                <jvmArg>-Xms64m</jvmArg>
+                                <jvmArg>-Xms256m</jvmArg>
                                 <jvmArg>-Xmx1024m</jvmArg>
+                                <jvmArg>-XX:MaxPermSize=512m</jvmArg>
                             </jvmArgs>
                         </configuration>
                     </execution>
@@ -352,6 +356,13 @@
                         <goals>
                             <goal>doc-jar</goal>
                         </goals>
+                        <configuration>
+                            <jvmArgs>
+                                <jvmArg>-Xms64m</jvmArg>
+                                <jvmArg>-Xmx1024m</jvmArg>
+                                <jvmArg>-XX:MaxPermSize=512m</jvmArg>
+                            </jvmArgs>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -439,7 +450,12 @@
         </repository>
     </distributionManagement>
     <profiles>
-
+        <profile>
+            <id>nocoverage</id>
+            <properties>
+                <surefireArgLine />
+            </properties>
+        </profile>
         <!-- GPG Signature on release -->
         <profile>
             <id>release-sign-artifacts</id>
