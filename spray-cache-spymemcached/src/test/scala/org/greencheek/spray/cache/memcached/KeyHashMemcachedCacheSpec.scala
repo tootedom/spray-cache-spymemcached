@@ -7,11 +7,12 @@ import java.util.Random
 import org.specs2.matcher.Matcher
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
 import scala.concurrent.duration.Duration
-import org.greencheek.spray.cache.memcached.keyhashing.{NoKeyHash, MD5KeyHash, SHA256KeyHash}
+import org.greencheek.spray.cache.memcached.keyhashing._
 import org.specs2.runner.JUnitRunner
 import org.junit.runner.RunWith
 import akka.actor.ActorSystem
 import ExecutionContext.Implicits.global
+import org.greencheek.util.memcached.WithMemcached
 
 /**
  * Created by dominictootell on 07/04/2014.
@@ -61,6 +62,36 @@ class KeyHashMemcachedCacheSpec extends MemcachedBasedSpec {
     "sha256 can have a key with a space in it" in memcachedContext {
       val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
         waitForMemcachedSet = true, allowFlush = false, keyHashType = SHA256KeyHash)
+
+      cache("1 space 1")("A").await === "A"
+      cache("2 space 2")("B").await === "B"
+
+      cache.get("1 space 1").get.await === "A"
+
+    }
+    "jenkins hash can have a key with a space in it" in memcachedContext {
+      val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
+        waitForMemcachedSet = true, allowFlush = false, keyHashType = JenkinsHash)
+
+      cache("1 space 1")("A").await === "A"
+      cache("2 space 2")("B").await === "B"
+
+      cache.get("1 space 1").get.await === "A"
+
+    }
+    "java xxhash can have a key with a space in it" in memcachedContext {
+      val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
+        waitForMemcachedSet = true, allowFlush = false, keyHashType = XXJavaHash)
+
+      cache("1 space 1")("A").await === "A"
+      cache("2 space 2")("B").await === "B"
+
+      cache.get("1 space 1").get.await === "A"
+
+    }
+    "native xxhash can have a key with a space in it" in memcachedContext {
+      val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
+        waitForMemcachedSet = true, allowFlush = false, keyHashType = XXNativeJavaHash)
 
       cache("1 space 1")("A").await === "A"
       cache("2 space 2")("B").await === "B"

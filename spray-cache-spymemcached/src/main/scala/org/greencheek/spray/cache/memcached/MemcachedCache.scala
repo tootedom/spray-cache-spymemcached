@@ -235,7 +235,11 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     case MD5LowerKeyHash => new MD5DigestKeyHashing(upperCase = false)
     case SHA256LowerKeyHash => new SHA256DigestKeyHashing(upperCase = false)
     case NoKeyHash => NoKeyHashing.INSTANCE
+    case XXJavaHash => XXKeyHashing.JAVA_INSTANCE
+    case XXNativeJavaHash => XXKeyHashing.JNI_INSTANCE
+    case JenkinsHash => JenkinsKeyHashing
     case _ => NoKeyHashing.INSTANCE
+
 
   }
 

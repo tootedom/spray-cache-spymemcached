@@ -11,3 +11,6 @@ case object SHA256UpperKeyHash extends KeyHashType
 case object SHA256LowerKeyHash extends KeyHashType
 case object SHA256KeyHash extends KeyHashType
 case object NoKeyHash extends KeyHashType
+case object XXJavaHash extends KeyHashType
+case object XXNativeJavaHash extends KeyHashType
+case object JenkinsHash extends KeyHashType
