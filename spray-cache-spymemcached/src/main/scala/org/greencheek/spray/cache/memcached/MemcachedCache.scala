@@ -474,4 +474,13 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   }
 
+  def close()= {
+    if(isEnabled) {
+      store.clear();
+      memcached.shutdown()
+      isEnabled = false;
+    }
+
+  }
+
 }

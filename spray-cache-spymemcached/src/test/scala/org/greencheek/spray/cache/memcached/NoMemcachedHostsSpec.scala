@@ -26,11 +26,10 @@ class NoMemcachedHostsSpec extends MemcachedBasedSpec {
 
   val memcachedContext = WithMemcached(false)
 
-
   "A Memcached cache" >> {
     "is non invasive when no host are available" in memcachedContext {
 
-      val randomPort = PortUtil.getPort(PortUtil.findFreePort)
+      val randomPort = portUtil.getPort(portUtil.findFreePort)
       val hosts = "localhost:" + randomPort + ",localhost:" + randomPort
 
       val cache = new MemcachedCache[String](memcachedHosts = hosts, protocol = Protocol.TEXT,

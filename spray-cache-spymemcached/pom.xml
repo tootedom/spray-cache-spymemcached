@@ -19,6 +19,7 @@
         <memcachedtest.version>1.0.0</memcachedtest.version>
         <finaglememcached.version>6.13.1</finaglememcached.version>
         <xxhashing.version>1.2.0</xxhashing.version>
+        <jsnappy.version>0.3</jsnappy.version>
     </properties>
 
     <dependencies>
@@ -42,7 +43,11 @@
             <artifactId>lz4</artifactId>
             <version>${xxhashing.version}</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.iq80.snappy</groupId>
+            <artifactId>snappy</artifactId>
+            <version>${jsnappy.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>com.thimbleware.jmemcached</groupId>
@@ -56,10 +61,23 @@
             <version>${logback.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>0.8</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>0.8</version>
+            <scope>test</scope>
+        </dependency>
         <!--<dependency>-->
             <!--<groupId>com.github.axel22</groupId>-->
             <!--<artifactId>scalameter_2.10</artifactId>-->
             <!--<version>0.5-M2</version>-->
+            <!--<scope>test</scope>-->
         <!--</dependency>-->
         <!--<dependency>-->
             <!--<groupId>com.twitter</groupId>-->
@@ -68,4 +86,300 @@
             <!--<scope>test</scope>-->
         <!--</dependency>-->
     </dependencies>
+    <build>
+        <plugins>
+
+
+            <!-- JMH Here: -->
+
+            <!--&lt;!&ndash;-->
+            <!--1. Add source directories for both scalac and javac.-->
+            <!--&ndash;&gt;-->
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <id>add-source</id>
+                        <phase>process-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <!--<source>${project.basedir}/src/main/java</source>-->
+                                <!--<source>${project.basedir}/src/main/scala</source>-->
+                                <!--<source>${project.basedir}/src/test/java</source>-->
+                                <source>${project.basedir}/src/performance-test/java</source>
+                                <source>${project.basedir}/src/performance-test/scala</source>
+                                <!--<source>${project.basedir}/target/generated-sources/jmh</source>-->
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                2. Compile Scala sources
+              -->
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>${scala-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>process-sources</phase>
+                        <id>main-scalac</id>
+                        <goals>
+                            <goal>add-source</goal>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <args>
+                                <arg>-encoding</arg>
+                                <arg>UTF-8</arg>
+                                <arg>-target:jvm-1.6</arg>
+                                <arg>-deprecation</arg>
+                                <arg>-feature</arg>
+                                <arg>-unchecked</arg>
+                                <arg>-language:implicitConversions</arg>
+                                <arg>-language:reflectiveCalls</arg>
+                                <arg>-language:postfixOps</arg>
+                            </args>
+                            <jvmArgs>
+                                <jvmArg>-Xms256m</jvmArg>
+                                <jvmArg>-Xmx1024m</jvmArg>
+                                <jvmArg>-XX:MaxPermSize=512m</jvmArg>
+                            </jvmArgs>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <phase>process-test-sources</phase>
+                        <id>test-scalac</id>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <args>
+                                <arg>-encoding</arg>
+                                <arg>UTF-8</arg>
+                                <arg>-target:jvm-1.6</arg>
+                                <arg>-deprecation</arg>
+                                <arg>-feature</arg>
+                                <arg>-unchecked</arg>
+                                <arg>-language:implicitConversions</arg>
+                                <arg>-language:reflectiveCalls</arg>
+                                <arg>-language:postfixOps</arg>
+                            </args>
+                            <jvmArgs>
+                                <jvmArg>-Xms256m</jvmArg>
+                                <jvmArg>-Xmx1024m</jvmArg>
+                                <jvmArg>-XX:MaxPermSize=512m</jvmArg>
+                            </jvmArgs>
+                        </configuration>
+                    </execution>
+                    <!--<execution>-->
+                        <!--<phase>process-test-sources</phase>-->
+                        <!--<id>test-performance-scalac</id>-->
+                        <!--<goals>-->
+                            <!--<goal>testCompile</goal>-->
+                        <!--</goals>-->
+                        <!--<configuration>-->
+                            <!--<testOutputDir>${project.basedir}/target/performance-classes</testOutputDir>-->
+                            <!--<includes>-->
+                                <!--<include>**/org/greencheek/spray/cache/memcached/perf*/**/*.scala</include>-->
+                            <!--</includes>-->
+                            <!--<args>-->
+                                <!--<arg>-encoding</arg>-->
+                                <!--<arg>UTF-8</arg>-->
+                                <!--<arg>-target:jvm-1.6</arg>-->
+                                <!--<arg>-deprecation</arg>-->
+                                <!--<arg>-feature</arg>-->
+                                <!--<arg>-unchecked</arg>-->
+                                <!--<arg>-language:implicitConversions</arg>-->
+                                <!--<arg>-language:reflectiveCalls</arg>-->
+                                <!--<arg>-language:postfixOps</arg>-->
+                            <!--</args>-->
+                            <!--<jvmArgs>-->
+                                <!--<jvmArg>-Xms256m</jvmArg>-->
+                                <!--<jvmArg>-Xmx1024m</jvmArg>-->
+                                <!--<jvmArg>-XX:MaxPermSize=512m</jvmArg>-->
+                            <!--</jvmArgs>-->
+                        <!--</configuration>-->
+                    <!--</execution>-->
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>doc-jar</goal>
+                        </goals>
+                        <configuration>
+                            <jvmArgs>
+                                <jvmArg>-Xms64m</jvmArg>
+                                <jvmArg>-Xmx1024m</jvmArg>
+                                <jvmArg>-XX:MaxPermSize=512m</jvmArg>
+                            </jvmArgs>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--<plugin>-->
+            <!--<groupId>net.alchim31.maven</groupId>-->
+            <!--<artifactId>scala-maven-plugin</artifactId>-->
+            <!--<version>3.1.6</version>-->
+            <!--<configuration>-->
+            <!--<recompileMode>incremental</recompileMode>-->
+            <!--</configuration>-->
+            <!--<executions>-->
+            <!--<execution>-->
+            <!--<phase>process-sources</phase>-->
+            <!--<goals>-->
+            <!--<goal>compile</goal>-->
+            <!--</goals>-->
+            <!--</execution>-->
+            <!--</executions>-->
+            <!--</plugin>-->
+
+            <!--
+                3. Invoke JMH generators to produce benchmark code
+            -->
+
+            <!--<plugin>-->
+                <!--<groupId>org.codehaus.mojo</groupId>-->
+                <!--<artifactId>exec-maven-plugin</artifactId>-->
+                <!--<version>1.2.1</version>-->
+                <!--<executions>-->
+                    <!--<execution>-->
+                        <!--<phase>process-test-sources</phase>-->
+                        <!--<goals>-->
+                            <!--<goal>java</goal>-->
+                        <!--</goals>-->
+                        <!--<configuration>-->
+                            <!--<includePluginDependencies>true</includePluginDependencies>-->
+                            <!--<mainClass>org.openjdk.jmh.generators.bytecode.JmhBytecodeGenerator</mainClass>-->
+                            <!--<arguments>-->
+                                <!--<argument>${project.basedir}/target/performance-classes/</argument>-->
+                                <!--<argument>${project.basedir}/target/generated-sources/jmh/</argument>-->
+                                <!--<argument>${project.basedir}/target/performance-classes/</argument>-->
+                            <!--</arguments>-->
+                        <!--</configuration>-->
+                    <!--</execution>-->
+                <!--</executions>-->
+                <!--<dependencies>-->
+                    <!--<dependency>-->
+                        <!--<groupId>org.openjdk.jmh</groupId>-->
+                        <!--<artifactId>jmh-generator-bytecode</artifactId>-->
+                        <!--<version>0.8</version>-->
+                    <!--</dependency>-->
+                    <!--<dependency>-->
+                        <!--<groupId>org.ow2.asm</groupId>-->
+                        <!--<artifactId>asm</artifactId>-->
+                        <!--<version>5.0.3</version>-->
+                    <!--</dependency>-->
+                <!--</dependencies>-->
+            <!--</plugin>-->
+
+            <!--&lt;!&ndash;-->
+                <!--4. Compile JMH generated code.-->
+             <!--&ndash;&gt;-->
+
+            <!--<plugin>-->
+                <!--<groupId>org.apache.maven.plugins</groupId>-->
+                <!--<artifactId>maven-compiler-plugin</artifactId>-->
+                <!--<version>3.1</version>-->
+                <!--<configuration>-->
+                    <!--<compilerVersion>1.6</compilerVersion>-->
+                    <!--<source>1.6</source>-->
+                    <!--<target>1.6</target>-->
+                    <!--<compilerArgument>-proc:none</compilerArgument>-->
+                <!--</configuration>-->
+            <!--</plugin>-->
+
+            <!--
+                5. Package all the dependencies into the JAR
+             -->
+
+            <!--<plugin>-->
+            <!--<groupId>org.apache.maven.plugins</groupId>-->
+            <!--<artifactId>maven-shade-plugin</artifactId>-->
+            <!--<version>${maven-shade-plugin.version}</version>-->
+            <!--<executions>-->
+            <!--<execution>-->
+            <!--<phase>package</phase>-->
+            <!--<goals>-->
+            <!--<goal>shade</goal>-->
+            <!--</goals>-->
+            <!--<configuration>-->
+            <!--<shadeTestJar>true</shadeTestJar>-->
+            <!--<artifactSet>-->
+            <!--<includes>-->
+            <!--<include>${project.groupId}:${project.artifactId}:test-jar</include>-->
+            <!--<include>org.openjdk.jmh:jmh-core:jar</include>-->
+            <!--<include>net.spy:spymemcached</include>-->
+            <!--<include>com.twitter:jsr166e</include>-->
+            <!--<include>org.slf4j:slf4j-api:jar</include>-->
+            <!--<include>net.jpountz.lz4:lz4:jar</include>-->
+            <!--<include>org.iq80.snappy:snappy:jar</include>-->
+            <!--<include>io.spray:spray-caching:jar</include>-->
+            <!--<include>io.spray:spray-util:jar</include>-->
+            <!--<include>org.scala-lang:scala-library:jar</include>-->
+            <!--<include>com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:jar</include>-->
+            <!--</includes>-->
+            <!--</artifactSet>-->
+
+            <!--<finalName>microbenchmarks</finalName>-->
+            <!--<transformers>-->
+            <!--<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">-->
+            <!--<mainClass>org.openjdk.jmh.Main</mainClass>-->
+            <!--</transformer>-->
+            <!--</transformers>-->
+            <!--</configuration>-->
+            <!--</execution>-->
+            <!--</executions>-->
+            <!--<dependencies>-->
+            <!--<dependency>-->
+            <!--<groupId>org.openjdk.jmh</groupId>-->
+            <!--<artifactId>jmh-core</artifactId>-->
+            <!--<version>0.8</version>-->
+            <!--</dependency>-->
+            <!--</dependencies>-->
+            <!--<dependencies>-->
+            <!--<dependency>-->
+            <!--<groupId>${project.groupId}</groupId>-->
+            <!--<artifactId>${project.artifactId}</artifactId>-->
+            <!--<version>${project.version}</version>-->
+            <!--<type>test-jar</type>-->
+            <!--</dependency>-->
+            <!--</dependencies>-->
+            <!--</plugin>-->
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/main/assembly/test-jar-with-dependencies.xml</descriptor>
+                    </descriptors>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.greencheek.spray.cache.memcached.performancetest.runner.BenchmarkRunner</mainClass>
+                        </manifest>
+                    </archive>
+                    <finalName>performancetests</finalName>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

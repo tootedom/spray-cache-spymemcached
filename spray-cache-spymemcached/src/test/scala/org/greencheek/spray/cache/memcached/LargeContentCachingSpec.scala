@@ -29,7 +29,7 @@ object FileReader {
 @RunWith(classOf[JUnitRunner])
 class LargeContentCachingSpec extends MemcachedBasedSpec {
 
-  val largeContentFile : java.io.File =  new java.io.File(this.getClass.getResource("/largecontent").getPath)
+  val largeContent = LargeString.string
 
   implicit val system = ActorSystem()
 
@@ -38,9 +38,6 @@ class LargeContentCachingSpec extends MemcachedBasedSpec {
 
   "A Memcached cache" >> {
     "can store a large piece of content" in memcachedContext {
-      val content = FileReader.using(io.Source.fromFile(largeContentFile)) {
-        source => { source.mkString }
-      }
 
       val hosts = "localhost:"+memcachedContext.memcached.port
 
@@ -48,8 +45,8 @@ class LargeContentCachingSpec extends MemcachedBasedSpec {
         doHostConnectionAttempt = true, waitForMemcachedSet = true)
 
 
-      cache("98765499")(content).await === content
-      cache("98765499")("B").await === content
+      cache("98765499")(largeContent).await === largeContent
+      cache("98765499")("B").await === largeContent
 
     }
   }

@@ -165,6 +165,28 @@
 
     <build>
         <plugins>
+            <!--<plugin>-->
+                <!--<groupId>org.codehaus.mojo</groupId>-->
+                <!--<artifactId>build-helper-maven-plugin</artifactId>-->
+                <!--<version>1.8</version>-->
+                <!--<executions>-->
+                    <!--<execution>-->
+                        <!--<id>add-source</id>-->
+                        <!--<phase>generate-test-sources</phase>-->
+                        <!--<goals>-->
+                            <!--<goal>add-source</goal>-->
+                        <!--</goals>-->
+                        <!--<configuration>-->
+                            <!--<sources>-->
+                                <!--<source>${project.basedir}/src/test/scala</source>-->
+                                <!--<source>${project.basedir}/target/generated-sources/jmh</source>-->
+                            <!--</sources>-->
+                        <!--</configuration>-->
+                    <!--</execution>-->
+                <!--</executions>-->
+            <!--</plugin>-->
+
+
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -275,12 +297,17 @@
                 </executions>
             </plugin>
             <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>${maven-assembly-plugin.version}</version>
-            </plugin>
-            <plugin>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>${maven-jar-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>test-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -296,76 +323,7 @@
                     </includes>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>net.alchim31.maven</groupId>
-                <artifactId>scala-maven-plugin</artifactId>
-                <version>${scala-maven-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>main-scalac</id>
-                        <goals>
-                            <goal>add-source</goal>
-                            <goal>compile</goal>
-                            <goal>testCompile</goal>
-                        </goals>
-                        <configuration>
-                            <args>
-                                <arg>-encoding</arg>
-                                <arg>UTF-8</arg>
-                                <arg>-target:jvm-1.6</arg>
-                                <arg>-deprecation</arg>
-                                <arg>-feature</arg>
-                                <arg>-unchecked</arg>
-                                <arg>-language:implicitConversions</arg>
-                                <arg>-language:reflectiveCalls</arg>
-                                <arg>-language:postfixOps</arg>
-                            </args>
-                            <jvmArgs>
-                                <jvmArg>-Xms256m</jvmArg>
-                                <jvmArg>-Xmx1024m</jvmArg>
-                                <jvmArg>-XX:MaxPermSize=512m</jvmArg>
-                            </jvmArgs>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>test-scalac</id>
-                        <goals>
-                            <goal>testCompile</goal>
-                        </goals>
-                        <configuration>
-                            <args>
-                                <arg>-encoding</arg>
-                                <arg>UTF-8</arg>
-                                <arg>-target:jvm-1.6</arg>
-                                <arg>-deprecation</arg>
-                                <arg>-feature</arg>
-                                <arg>-unchecked</arg>
-                                <arg>-language:implicitConversions</arg>
-                                <arg>-language:reflectiveCalls</arg>
-                                <arg>-language:postfixOps</arg>
-                            </args>
-                            <jvmArgs>
-                                <jvmArg>-Xms256m</jvmArg>
-                                <jvmArg>-Xmx1024m</jvmArg>
-                                <jvmArg>-XX:MaxPermSize=512m</jvmArg>
-                            </jvmArgs>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <goals>
-                            <goal>doc-jar</goal>
-                        </goals>
-                        <configuration>
-                            <jvmArgs>
-                                <jvmArg>-Xms64m</jvmArg>
-                                <jvmArg>-Xmx1024m</jvmArg>
-                                <jvmArg>-XX:MaxPermSize=512m</jvmArg>
-                            </jvmArgs>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-site-plugin</artifactId>

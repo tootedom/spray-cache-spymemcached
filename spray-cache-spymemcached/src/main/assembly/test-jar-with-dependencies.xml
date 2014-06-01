@@ -1,0 +1,60 @@
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
+    <id>test-jar-with-dependencies</id>
+    <formats>
+        <format>jar</format>
+    </formats>
+
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>/</outputDirectory>
+            <useProjectArtifact>true</useProjectArtifact>
+            <!-- we're creating the test-jar as an attachement -->
+            <useProjectAttachments>true</useProjectAttachments>
+            <unpack>true</unpack>
+            <scope>test</scope>
+            <includes>
+                <include>org.openjdk.jmh:jmh-core</include>
+                <include>net.spy:spymemcached</include>
+                <include>com.twitter:jsr166e</include>
+                <include>org.slf4j:slf4j-api</include>
+                <include>net.jpountz.lz4:lz4</include>
+                <include>org.iq80.snappy:snappy</include>
+                <include>io.spray:spray-caching</include>
+                <include>io.spray:spray-util</include>
+                <include>org.scala-lang:scala-library</include>
+                <include>net.sf.jopt-simple:jopt-simple</include>
+                <include>org.apache.commons:commons-math3</include>
+                <include>org.specs2:scalaz-core_2.10</include>
+                <include>org.specs2:scalaz-concurrent_2.10</include>
+                <include>org.specs2:scalaz-effect_2.10</include>
+                <include>org.hamcrest:hamcrest-core</include>
+                <include>junit:junit</include>
+                <include>org.scala-lang:scala-reflect</include>
+                <include>org.scalatest:scalatest_2.10</include>
+                <include>com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru</include>
+                <include>org.scala-lang:scala-library:jar</include>
+                <include>io.spray:spray-util</include>
+                <include>com.typesafe.akka:akka-actor_2.10</include>
+                <include>com.typesafe:config</include>
+            </includes>
+        </dependencySet>
+    </dependencySets>
+    <fileSets>
+        <fileSet>
+            <directory>${project.build.directory}/test-classes</directory>
+            <outputDirectory>/</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>${project.build.directory}/classes</directory>
+            <outputDirectory>/</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>${project.build.directory}/performance-classes</directory>
+            <outputDirectory>/</outputDirectory>
+        </fileSet>
+    </fileSets>
+
+</assembly>

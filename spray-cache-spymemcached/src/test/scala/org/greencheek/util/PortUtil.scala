@@ -5,7 +5,10 @@ import java.net.{InetAddress, InetSocketAddress, ServerSocket}
 /**
  * Created by dominictootell on 09/03/2014.
  */
-object PortUtil {
+class PortUtil {
+
+  def apply() = new PortUtil
+
 
   def findFreePort: ServerSocket = {
     val server: ServerSocket = new ServerSocket(0,1,InetAddress.getLoopbackAddress())
