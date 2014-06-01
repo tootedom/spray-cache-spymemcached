@@ -23,7 +23,7 @@ object MemcachedDaemonFactory {
       val daemon: MemCacheDaemon[LocalCacheElement] = new MemCacheDaemon[LocalCacheElement]();
 
 
-      val cacheStorage: CacheStorage[Key, LocalCacheElement] = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.LRU, 1000, 512000);
+      val cacheStorage: CacheStorage[Key, LocalCacheElement] = ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.LRU, 2000, 512000);
       val cacheImpl: Cache[LocalCacheElement] = new CacheImpl(cacheStorage)
       daemon.setCache(cacheImpl)
       daemon.setAddr(new InetSocketAddress("localhost", port))
