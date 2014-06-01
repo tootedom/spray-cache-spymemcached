@@ -13,6 +13,7 @@ import org.junit.runner.RunWith
 import akka.actor.ActorSystem
 import ExecutionContext.Implicits.global
 import org.greencheek.util.memcached.WithMemcached
+import net.spy.memcached.FailureMode
 
 /**
  * Created by dominictootell on 07/04/2014.
@@ -26,7 +27,7 @@ class KeyHashMemcachedCacheSpec extends MemcachedBasedSpec {
 
   "A Memcached cache" >> {
     "be thread-safe sha256 hash key" in memcachedContext {
-      val cache = new MemcachedCache[Int](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
+      val cache = new MemcachedCache[Int](Duration.Zero, 10000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
         waitForMemcachedSet = true, allowFlush = false, keyHashType = SHA256KeyHash)
 
       // exercise the cache from 10 parallel "tracks" (threads)
@@ -110,7 +111,7 @@ class KeyHashMemcachedCacheSpec extends MemcachedBasedSpec {
     }
     "key with no hashing cannot have a key with a linefeed/return in it" in memcachedContext {
       val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
-        waitForMemcachedSet = true, allowFlush = false, keyHashType = NoKeyHash)
+        waitForMemcachedSet = true, allowFlush = false, keyHashType = NoKeyHash, failureMode = FailureMode.Cancel)
 
       cache("1space1\r\n2to2")("A").await === "A"
       cache("1space1\r\n2to2")("B").await === "B"
