@@ -7,130 +7,88 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 
 public class ResizableByteBufferNoBoundsCheckingBackedOutputStream extends OutputStream {
-    static final int MAX_ARRAY_SIZE =Integer.MAX_VALUE - 8;
 
-    protected byte[] buf;
-    protected int currentCapacityLeft;
-    protected int position;
-    private final int maxCapacity;
-    private boolean hasSpaceToGrow = true;
-
-    public ResizableByteBufferNoBoundsCheckingBackedOutputStream(int initialCapacity, int maxCapacity) {
-        currentCapacityLeft = initialCapacity;
-        buf = new byte[initialCapacity];
-        this.maxCapacity = maxCapacity;
-        if(initialCapacity == maxCapacity) {
-            hasSpaceToGrow = false;
-        }
-    }
+    private final ResizeableByteBuffer byteBuffer;
 
     public ResizableByteBufferNoBoundsCheckingBackedOutputStream(int initialCapacity) {
-        this(initialCapacity,MAX_ARRAY_SIZE);
+        this(initialCapacity,ResizeableByteBuffer.MAX_ARRAY_SIZE);
+    }
+
+    public ResizableByteBufferNoBoundsCheckingBackedOutputStream(int initialCapacity, int maxCapacity) {
+        this.byteBuffer = new ResizeableByteBuffer(initialCapacity,maxCapacity);
+    }
+
+
+    public ResizeableByteBuffer getBuffer() {
+        return byteBuffer;
     }
 
     public int size() {
-        return position;
+        return byteBuffer.size();
     }
 
 
     public void reset() {
-        position = 0;
-        currentCapacityLeft = buf.length;
+        byteBuffer.reset();
     }
 
 
     public byte[] getBuf() {
-        return buf;
+        return byteBuffer.getBuf();
     }
 
     public byte[] toByteArray() {
-        final byte[] bytes = new byte[position];
-        System.arraycopy(buf,0,bytes,0,position);
-        return bytes;
+        return byteBuffer.toByteArray();
     }
 
 
     public ByteBuffer toByteBuffer() {
-        return ByteBuffer.wrap(buf, 0, position);
-    }
-
-    private void checkSizeAndGrow(int extra) {
-        if(extra>currentCapacityLeft) {
-           if(hasSpaceToGrow) {
-               grow(extra);
-           } else {
-               throw new BufferOverflowException();
-           }
-        }
-    }
-
-    private void grow(int extra) {
-        int currentCapacity = buf.length;
-        int requiredCapacity = position+extra;
-
-        int newSize = currentCapacity*2;
-        if(newSize>=maxCapacity) {
-            // new size is less than the required capacity
-            newSize = maxCapacity;
-            if(newSize<requiredCapacity) throw new BufferOverflowException();
-
-            hasSpaceToGrow = false;
-        } else {
-            if(newSize<requiredCapacity) {
-                newSize = requiredCapacity;
-            }
-        }
-
-
-        currentCapacityLeft = newSize - position;
-
-        byte[] newBuf = new byte[newSize];
-        System.arraycopy(buf, 0, newBuf, 0, position);
-        buf = newBuf;
+        return byteBuffer.toByteBuffer();
     }
 
     public void append(byte b) {
-        checkSizeAndGrow(1);
-        appendNoResize(b);
-    }
-
-    private void appendNoResize(byte c) {
-        buf[position++]=c;
-        currentCapacityLeft--;
-    }
-
-    private void appendNoResize(byte[] bytes,int len) {
-        System.arraycopy(bytes, 0, buf, position, len);
-        position+=len;
-        currentCapacityLeft-=len;
+        byteBuffer.append(b);
+        if(!byteBuffer.canWrite()) {
+            throw new BufferOverflowException();
+        }
     }
 
     public void append(byte[] bytes) {
-        int len = bytes.length;
-        checkSizeAndGrow(len);
-        appendNoResize(bytes,len);
+        byteBuffer.append(bytes);
+        if(!byteBuffer.canWrite()) {
+            throw new BufferOverflowException();
+        }
     }
 
     public void append(byte[] b, int off, int len) {
-        checkSizeAndGrow(len);
-        System.arraycopy(b, off, buf, position, len);
-        position+=len;
-        currentCapacityLeft-=len;
+        byteBuffer.append(b,off,len);
+        if(!byteBuffer.canWrite()) {
+            throw new BufferOverflowException();
+        }
     }
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
-        append(b,off,len);
+        try {
+            append(b, off, len);
+        } catch(BufferOverflowException e) {
+            throw new IOException(e.getMessage(),e);
+        }
     }
 
 
     @Override
     public void write(int b) throws IOException {
-        append((byte)b);
+        try {
+            append((byte) b);
+        } catch (BufferOverflowException e) {
+            throw new IOException(e.getMessage(),e);
+        }
     }
 
     @Override
     public void write(byte[] b) throws IOException {
-        append(b);
+        if(b==null) throw new NullPointerException();
+        write(b,0,b.length);
     }
 }
