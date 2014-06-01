@@ -49,10 +49,10 @@ public class LargeCacheObject implements Serializable {
                        "\n" +
                        "    his approach has the advantage of nicely taking care of the thundering herds problem where many requests to a\n" +
                        "    particular cache key (e.g. a resource URI) arrive before the first one could be completed. Normally\n" +
-                       "    (without special guarding techniques, like so-called “cowboy” entries) this can cause many requests\n" +
+                       "    (without special guarding techniques, like so-called “cowboy entries) this can cause many requests\n" +
                        "    to compete for system resources while trying to compute the same result thereby greatly reducing overall\n" +
                        "    system performance. When you use a spray-caching cache the very first request that arrives for a certain\n" +
-                       "    cache key causes a future to be put into the cache which all later requests then “hook into”. As soon as\n" +
+                       "    cache key causes a future to be put into the cache which all later requests then “hook into. As soon as\n" +
                        "    the first request completes all other ones complete as well. This minimizes processing time and server\n" +
                        "    load for all requests.\n" +
                        "\n" +
@@ -99,10 +99,10 @@ public class LargeCacheObject implements Serializable {
                        "\n" +
                        "    his approach has the advantage of nicely taking care of the thundering herds problem where many requests to a\n" +
                        "    particular cache key (e.g. a resource URI) arrive before the first one could be completed. Normally\n" +
-                       "    (without special guarding techniques, like so-called “cowboy” entries) this can cause many requests\n" +
+                       "    (without special guarding techniques, like so-called “cowboy entries) this can cause many requests\n" +
                        "    to compete for system resources while trying to compute the same result thereby greatly reducing overall\n" +
                        "    system performance. When you use a spray-caching cache the very first request that arrives for a certain\n" +
-                       "    cache key causes a future to be put into the cache which all later requests then “hook into”. As soon as\n" +
+                       "    cache key causes a future to be put into the cache which all later requests then “hook into. As soon as\n" +
                        "    the first request completes all other ones complete as well. This minimizes processing time and server\n" +
                        "    load for all requests.\n" +
                        "\n" +
@@ -149,10 +149,10 @@ public class LargeCacheObject implements Serializable {
                        "\n" +
                        "    his approach has the advantage of nicely taking care of the thundering herds problem where many requests to a\n" +
                        "    particular cache key (e.g. a resource URI) arrive before the first one could be completed. Normally\n" +
-                       "    (without special guarding techniques, like so-called “cowboy” entries) this can cause many requests\n" +
+                       "    (without special guarding techniques, like so-called “cowboy entries) this can cause many requests\n" +
                        "    to compete for system resources while trying to compute the same result thereby greatly reducing overall\n" +
                        "    system performance. When you use a spray-caching cache the very first request that arrives for a certain\n" +
-                       "    cache key causes a future to be put into the cache which all later requests then “hook into”. As soon as\n" +
+                       "    cache key causes a future to be put into the cache which all later requests then “hook into. As soon as\n" +
                        "    the first request completes all other ones complete as well. This minimizes processing time and server\n" +
                        "    load for all requests.\n" +
                        "\n" +
@@ -199,10 +199,10 @@ public class LargeCacheObject implements Serializable {
                        "\n" +
                        "    his approach has the advantage of nicely taking care of the thundering herds problem where many requests to a\n" +
                        "    particular cache key (e.g. a resource URI) arrive before the first one could be completed. Normally\n" +
-                       "    (without special guarding techniques, like so-called “cowboy” entries) this can cause many requests\n" +
+                       "    (without special guarding techniques, like so-called “cowboy entries) this can cause many requests\n" +
                        "    to compete for system resources while trying to compute the same result thereby greatly reducing overall\n" +
                        "    system performance. When you use a spray-caching cache the very first request that arrives for a certain\n" +
-                       "    cache key causes a future to be put into the cache which all later requests then “hook into”. As soon as\n" +
+                       "    cache key causes a future to be put into the cache which all later requests then hook into. As soon as\n" +
                        "    the first request completes all other ones complete as well. This minimizes processing time and server\n" +
                        "    load for all requests.\n" +
                        "\n" +
@@ -249,10 +249,10 @@ public class LargeCacheObject implements Serializable {
                        "\n" +
                        "    his approach has the advantage of nicely taking care of the thundering herds problem where many requests to a\n" +
                        "    particular cache key (e.g. a resource URI) arrive before the first one could be completed. Normally\n" +
-                       "    (without special guarding techniques, like so-called “cowboy” entries) this can cause many requests\n" +
+                       "    (without special guarding techniques, like so-called \"cowboy\" entries) this can cause many requests\n" +
                        "    to compete for system resources while trying to compute the same result thereby greatly reducing overall\n" +
                        "    system performance. When you use a spray-caching cache the very first request that arrives for a certain\n" +
-                       "    cache key causes a future to be put into the cache which all later requests then “hook into”. As soon as\n" +
+                       "    cache key causes a future to be put into the cache which all later requests then “hook into. As soon as\n" +
                        "    the first request completes all other ones complete as well. This minimizes processing time and server\n" +
                        "    load for all requests.\n" +
                        "\n" +
@@ -299,10 +299,10 @@ public class LargeCacheObject implements Serializable {
                        "\n" +
                        "    his approach has the advantage of nicely taking care of the thundering herds problem where many requests to a\n" +
                        "    particular cache key (e.g. a resource URI) arrive before the first one could be completed. Normally\n" +
-                       "    (without special guarding techniques, like so-called “cowboy” entries) this can cause many requests\n" +
+                       "    (without special guarding techniques, like so-called \"cowboy\" entries) this can cause many requests\n" +
                        "    to compete for system resources while trying to compute the same result thereby greatly reducing overall\n" +
                        "    system performance. When you use a spray-caching cache the very first request that arrives for a certain\n" +
-                       "    cache key causes a future to be put into the cache which all later requests then “hook into”. As soon as\n" +
+                       "    cache key causes a future to be put into the cache which all later requests then “hook into. As soon as\n" +
                        "    the first request completes all other ones complete as well. This minimizes processing time and server\n" +
                        "    load for all requests.\n" +
                        "\n" +
@@ -349,10 +349,10 @@ public class LargeCacheObject implements Serializable {
                        "\n" +
                        "    his approach has the advantage of nicely taking care of the thundering herds problem where many requests to a\n" +
                        "    particular cache key (e.g. a resource URI) arrive before the first one could be completed. Normally\n" +
-                       "    (without special guarding techniques, like so-called “cowboy” entries) this can cause many requests\n" +
+                       "    (without special guarding techniques, like so-called \"cowboy\" entries) this can cause many requests\n" +
                        "    to compete for system resources while trying to compute the same result thereby greatly reducing overall\n" +
                        "    system performance. When you use a spray-caching cache the very first request that arrives for a certain\n" +
-                       "    cache key causes a future to be put into the cache which all later requests then “hook into”. As soon as\n" +
+                       "    cache key causes a future to be put into the cache which all later requests then \"hook into\". As soon as\n" +
                        "    the first request completes all other ones complete as well. This minimizes processing time and server\n" +
                        "    load for all requests.\n" +
                        "\n" +
@@ -399,10 +399,10 @@ public class LargeCacheObject implements Serializable {
                        "\n" +
                        "    his approach has the advantage of nicely taking care of the thundering herds problem where many requests to a\n" +
                        "    particular cache key (e.g. a resource URI) arrive before the first one could be completed. Normally\n" +
-                       "    (without special guarding techniques, like so-called “cowboy” entries) this can cause many requests\n" +
+                       "    (without special guarding techniques, like so-called “cowboy entries) this can cause many requests\n" +
                        "    to compete for system resources while trying to compute the same result thereby greatly reducing overall\n" +
                        "    system performance. When you use a spray-caching cache the very first request that arrives for a certain\n" +
-                       "    cache key causes a future to be put into the cache which all later requests then “hook into”. As soon as\n" +
+                       "    cache key causes a future to be put into the cache which all later requests then \"hook into\". As soon as\n" +
                        "    the first request completes all other ones complete as well. This minimizes processing time and server\n" +
                        "    load for all requests.\n" +
                        "\n" +
@@ -449,10 +449,10 @@ public class LargeCacheObject implements Serializable {
                        "\n" +
                        "    his approach has the advantage of nicely taking care of the thundering herds problem where many requests to a\n" +
                        "    particular cache key (e.g. a resource URI) arrive before the first one could be completed. Normally\n" +
-                       "    (without special guarding techniques, like so-called “cowboy” entries) this can cause many requests\n" +
+                       "    (without special guarding techniques, like so-called \"cowboy\" entries) this can cause many requests\n" +
                        "    to compete for system resources while trying to compute the same result thereby greatly reducing overall\n" +
                        "    system performance. When you use a spray-caching cache the very first request that arrives for a certain\n" +
-                       "    cache key causes a future to be put into the cache which all later requests then “hook into”. As soon as\n" +
+                       "    cache key causes a future to be put into the cache which all later requests then “hook into. As soon as\n" +
                        "    the first request completes all other ones complete as well. This minimizes processing time and server\n" +
                        "    load for all requests.\n" +
                        "\n" +

@@ -27,11 +27,6 @@ public class ResizeableByteBufferTest
         return new ResizeableByteBuffer(min,max);
     }
 
-    public ResizeableByteBufferOutputStream getResizeableByteBufferOutputStream(int max, OutputStream wrappedContent) {
-
-        return new ResizeableByteBufferOutputStream(max,max,wrappedContent);
-    }
-
 
     @Test
     public void testCanWriteAByte() throws IOException {
