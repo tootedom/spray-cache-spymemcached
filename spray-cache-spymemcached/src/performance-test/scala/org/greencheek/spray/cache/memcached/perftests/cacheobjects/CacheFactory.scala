@@ -19,6 +19,16 @@ object CacheFactory {
 
   }
 
+  def createSmallXXJavaTextXXHashCache : MemcachedCache[SmallCacheObject] = {
+    new MemcachedCache[SmallCacheObject](
+      memcachedHosts = System.getProperty("memcached.hosts","localhost:11211"),
+      maxCapacity = 10,
+      keyHashType = XXJavaHash,
+      protocol =  Protocol.TEXT,
+      hashAlgorithm = MemcachedCache.XXHASH_ALGORITHM
+    )
+  }
+
   def createLargeXXJavaTextCache : MemcachedCache[LargeCacheObject] = {
     new MemcachedCache[LargeCacheObject](
       memcachedHosts = System.getProperty("memcached.hosts","localhost:11211"),

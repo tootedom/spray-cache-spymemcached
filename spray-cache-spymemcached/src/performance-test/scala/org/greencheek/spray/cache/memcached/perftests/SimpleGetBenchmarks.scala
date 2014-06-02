@@ -14,6 +14,10 @@ object SimpleGetBenchmarks {
     return cache.cache.apply(key)(value).await
   }
 
+  def simpleHashAlgoGet(key :SmallCacheKey, value :SmallCacheObject, cache : XXJavaHashSmallTextHashAlgoBenchmarkCache) : SmallCacheObject = {
+    return cache.cache.apply(key)(value).await
+  }
+
 
   def testLargeGet(key :LargeCacheKey, value :LargeCacheObject, cache : XXJavaHashLargeTextBenchmarkCache) : LargeCacheObject = {
     return cache.cache.apply(key)(value).await

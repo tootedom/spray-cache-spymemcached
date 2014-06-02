@@ -18,6 +18,9 @@ import scala.collection.JavaConversions._
 import scala.annotation.switch
 import org.greencheek.spray.cache.memcached.keyhashing._
 import scala.Some
+import org.greencheek.spy.extensions.connection.CustomConnectionFactoryBuilder
+import org.greencheek.spy.extensions.hashing.{JenkinsHash => JenkinsHashAlgo, XXHashAlogrithm}
+import org.greencheek.spray.cache.memcached.keyhashing.JenkinsHash
 
 /*
  * Created by dominictootell on 26/03/2014.
@@ -30,6 +33,9 @@ object MemcachedCache {
   private val DEFAULT_CAPACITY = 1000
   private val ONE_SECOND = Duration(1,TimeUnit.SECONDS)
 
+  val XXHASH_ALGORITHM: HashAlgorithm = new XXHashAlogrithm
+  val JENKINS_ALGORITHM: HashAlgorithm = new JenkinsHashAlgo
+  val DEFAULT_ALGORITHM: HashAlgorithm = DefaultHashAlgorithm.KETAMA_HASH
 
   private def validateMemcacheHosts(checkTimeout : Duration,
                                     addressesToCheck : List[InetSocketAddress]) : List[InetSocketAddress] = {
@@ -152,7 +158,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val memcachedHosts : String = "localhost:11211",
                                    val hashingType : Locator = Locator.CONSISTENT,
                                    val failureMode : FailureMode = FailureMode.Redistribute,
-                                   val hashAlgorithm : DefaultHashAlgorithm = DefaultHashAlgorithm.KETAMA_HASH,
+                                   val hashAlgorithm : HashAlgorithm = DefaultHashAlgorithm.KETAMA_HASH,
                                    val serializingTranscoder : Transcoder[Object] = new SerializingTranscoder(),
                                    val protocol : ConnectionFactoryBuilder.Protocol = Protocol.BINARY,
                                    val readBufferSize : Int = DefaultConnectionFactory.DEFAULT_READ_BUFFER_SIZE,
@@ -203,7 +209,10 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         }
         case hostsToUse : List[InetSocketAddress] => {
           isEnabled = true
-          val builder: ConnectionFactoryBuilder = new ConnectionFactoryBuilder()
+          val builder: ConnectionFactoryBuilder = keyValidationRequired(keyHashType) match {
+            case true => new ConnectionFactoryBuilder();
+            case false => new CustomConnectionFactoryBuilder();
+          }
           builder.setHashAlg(hashAlgorithm)
           builder.setLocatorType(hashingType)
           builder.setProtocol(protocol)
@@ -217,6 +226,17 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       }
     }
 
+  }
+
+  private def keyValidationRequired(keyHashType : KeyHashType ) : Boolean = {
+    keyHashType match {
+      case MD5KeyHash | MD5UpperKeyHash | MD5LowerKeyHash => false
+      case SHA256KeyHash | SHA256UpperKeyHash | SHA256LowerKeyHash => false
+      case XXJavaHash | XXNativeJavaHash => false
+      case JenkinsHash => false
+      case NoKeyHash => true
+      case _ => true
+    }
   }
 
   private val logger  : Logger = LoggerFactory.getLogger(classOf[MemcachedCache[Serializable]])

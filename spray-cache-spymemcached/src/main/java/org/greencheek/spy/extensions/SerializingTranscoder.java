@@ -133,9 +133,9 @@ public class SerializingTranscoder extends BaseSerializingTranscoder implements
     int flags = 0;
     if (o instanceof String) {
       b = encodeString((String) o);
-      if (StringUtils.isJsonObject((String) o)) {
-        return new CachedData(flags, b, getMaxSize());
-      }
+//      if (StringUtils.isJsonObject((String) o)) {
+//        return new CachedData(flags, b, getMaxSize());
+//      }
     } else if (o instanceof Long) {
       b = tu.encodeLong((Long) o);
       flags |= SPECIAL_LONG;
