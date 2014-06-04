@@ -9,13 +9,10 @@ import java.net.{InetSocketAddress, InetAddress}
 import org.slf4j.{LoggerFactory, Logger}
 import java.util.concurrent.{TimeoutException, TimeUnit}
 import net.spy.memcached.ConnectionFactoryBuilder.{Protocol, Locator}
-import scala.Some
-import scala.util.Success
 import net.spy.memcached.transcoders.Transcoder
 import org.greencheek.spy.extensions.SerializingTranscoder
 import org.greencheek.dns.lookup.{TCPAddressChecker, AddressChecker, LookupService}
 import scala.collection.JavaConversions._
-import scala.annotation.switch
 import org.greencheek.spray.cache.memcached.keyhashing._
 import scala.Some
 import org.greencheek.spy.extensions.connection.CustomConnectionFactoryBuilder
@@ -380,25 +377,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
               val promise = Promise[Serializable]()
               store.putIfAbsent(keyString, promise.future) match {
                 case null => {
-                  val future = genValue()
-                  future.onComplete {
-                    value =>
-                      promise.complete(value)
-                      // Need to check memcached exception here
-                      try {
-                        if (!value.isFailure) {
-                          writeToDistributedCache(keyString,value.get,itemExpiry)
-                        }
-                      } catch {
-                        case e: Exception => {
-                           logger.error("problem setting key {} in memcached",key)
-                        }
-                      } finally {
-                        store.remove(keyString, promise.future)
-                      }
-
-                  }
-                  future
+                  cacheWriteFunction(genValue(),promise,keyString,itemExpiry,ec)
                 }
                 case existingFuture => {
                   existingFuture
@@ -418,7 +397,37 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     }
   }
 
+  /**
+   * write to memcached when the future completes, the generated value,
+   * against the given key, with the specified expiry
+   * @param future  The future that will generate the value
+   * @param promise The promise that is stored in the thurdering herd local cache
+   * @param key The key against which to store an item
+   * @param itemExpiry the expiry for the item
+   * @return
+   */
+  private def cacheWriteFunction(future : Future[Serializable],promise: Promise[Serializable],
+                                 key : String, itemExpiry : Duration,
+                                 ec: ExecutionContext) : Future[Serializable] = {
+    future.onComplete {
+      value =>
+        promise.complete(value)
+        // Need to check memcached exception here
+        try {
+          if (!value.isFailure) {
+            writeToDistributedCache(key,value.get,itemExpiry)
+          }
+        } catch {
+          case e: Exception => {
+            logger.error("problem setting key {} in memcached",key)
+          }
+        } finally {
+          store.remove(key, promise.future)
+        }
 
+    }(ec)
+    future
+  }
 
   def remove(key: Any) = {
     if(!isEnabled) {
@@ -501,6 +510,10 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       isEnabled = false;
     }
 
+  }
+
+  def isCacheEnabled() : Boolean = {
+    isEnabled
   }
 
 }

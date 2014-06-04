@@ -61,7 +61,8 @@ abstract class MemcachedCacheSpec extends Specification {
       true
     }
     "store more than max capacity" in memcachedContext {
-      val cache = memcachedCache[String](getMemcachedHostsString.getOrElse("localhost:"+memcachedContext.memcached.port),1,binary = memcachedContext.binary)
+      val cache = memcachedCache[String](getMemcachedHostsString.getOrElse("localhost:"+memcachedContext.memcached.port),1,binary = memcachedContext.binary,
+                                          waitForMemcachedSet = true)
 
       val option1 = cache("35")( future {
         try {
