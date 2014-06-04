@@ -94,7 +94,7 @@ abstract class MemcachedCacheSpec extends Specification {
       cache.get("35").get.await == "hello"
       cache.get("45").get.await == "hello2"
 
-      memcachedContext.memcached.daemon.size == 2
+      memcachedContext.memcached.size() == 2
 
       true
     }

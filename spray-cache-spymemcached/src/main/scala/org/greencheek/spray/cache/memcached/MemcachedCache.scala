@@ -169,10 +169,21 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val allowFlush : Boolean = false,
                                    val waitForMemcachedRemove : Boolean = false,
                                    val removeWaitDuration : Duration = Duration(2,TimeUnit.SECONDS),
-                                   val keyHashType : KeyHashType = NoKeyHash) extends Cache[Serializable] {
+                                   val keyHashType : KeyHashType = NoKeyHash,
+                                   val keyPrefix : Option[String] = None) extends Cache[Serializable] {
 
   @volatile private var isEnabled = false
   @volatile private var memcached: MemcachedClientIF = null;
+
+  private val hashKeyPrefix = keyPrefix match {
+    case None => false
+    case Some(_ : String) => true
+  }
+
+  private val keyprefix = keyPrefix match {
+    case None => ""
+    case Some(prefix) => prefix
+  }
 
   private var parsedHosts : List[(String,Int)] =  MemcachedCache.parseMemcachedNodeList(memcachedHosts)
   parsedHosts match {
