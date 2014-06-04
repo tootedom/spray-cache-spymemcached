@@ -328,7 +328,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         futureSet.get(setWaitDuration.toMillis, TimeUnit.MILLISECONDS)
       } catch {
         case e: Exception => {
-          logger.warn("Exception waiting for memcached set to occur")
+          logger.warn("Exception waiting for memcached set to occur",e)
         }
       }
     } else {
@@ -426,7 +426,6 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                  ec: ExecutionContext) : Future[Serializable] = {
     future.onComplete {
       value =>
-        promise.complete(value)
         // Need to check memcached exception here
         try {
           if (!value.isFailure) {
@@ -438,10 +437,10 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
           }
         } finally {
           store.remove(key, promise.future)
+          promise.complete(value)
         }
-
     }(ec)
-    future
+    promise.future
   }
 
   def remove(key: Any) = {

@@ -14,6 +14,7 @@ import akka.actor.ActorSystem
 import ExecutionContext.Implicits.global
 import org.greencheek.util.memcached.WithMemcached
 import net.spy.memcached.FailureMode
+import org.junit.Assume
 
 /**
  * Created by dominictootell on 07/04/2014.
@@ -127,23 +128,42 @@ class KeyHashMemcachedCacheSpec extends MemcachedBasedSpec {
 
       cache.get("1 space 1") must beNone
     }
-    "key with no hashing can have a key with a space in it for binary client" in memcachedContext {
-      val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.BINARY,
-        waitForMemcachedSet = true, allowFlush = false, keyHashType = null)
+    "key with no hashing can have a key with a space in it for binary client" in {
+      java.lang.Boolean.parseBoolean(System.getProperty("test.binary.enabled")) match {
+        case true => {
 
-      cache("1 space 1")("A").await === "A"
-      cache("1 space 1")("B").await === "A"
+          val cache = new MemcachedCache[String] (Duration.Zero, 1000,
+          "localhost:11211", // + binaryMemcachedContext.memcached.port,
+          protocol = Protocol.BINARY,
+          waitForMemcachedSet = true, allowFlush = false, keyHashType = null)
 
-      cache.get("1 space 1") must beSome
+          cache ("1 space 1") ("A").await === "A"
+          cache ("1 space 1") ("B").await === "A"
+
+          cache.get ("1 space 1") must beSome
+        }
+        case false => {
+          1 === 1
+        }
+      }
     }
-    "key with no hashing can have a key with a space and linefeed in it for binary client" in memcachedContext {
-      val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.BINARY,
-        waitForMemcachedSet = true, allowFlush = false, keyHashType = null)
+    "key with no hashing can have a key with a space and linefeed in it for binary client" in {
+      java.lang.Boolean.parseBoolean(System.getProperty("test.binary.enabled")) match {
+        case true => {
+          val cache = new MemcachedCache[String](Duration.Zero, 1000,
+            "localhost::11211", // + binaryMemcachedContext.memcached.port,
+            protocol = Protocol.BINARY,
+            waitForMemcachedSet = true, allowFlush = false, keyHashType = null)
 
-      cache("1 space 1\r\n2 to 2")("A").await === "A"
-      cache("1 space 1\r\n2 to 2")("B").await === "A"
+          cache("1 space 1\r\n2 to 2")("A").await === "A"
+          cache("1 space 1\r\n2 to 2")("B").await === "A"
 
-      cache.get("1 space 1\r\n2 to 2") must beSome
+          cache.get("1 space 1\r\n2 to 2") must beSome
+        }
+        case false => {
+          1 === 1
+        }
+      }
     }
   }
 }

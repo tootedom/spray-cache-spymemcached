@@ -35,7 +35,7 @@
         <connection>scm:git:git@github.com:tootedom/spray-cache-extensions.git</connection>
         <url>scm:git:git@github.com:tootedom/spray-cache-extensions.git</url>
         <developerConnection>scm:git:git@github.com:tootedom/spray-cache-extensions.git</developerConnection>
-        <tag>spray-cache-extensions-0.1.2</tag>
+        <tag>spray-cache-extensions-0.1.11</tag>
     </scm>
     <properties>
         <header.basedir>${project.basedir}</header.basedir>
