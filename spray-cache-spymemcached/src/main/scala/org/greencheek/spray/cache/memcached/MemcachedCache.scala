@@ -272,7 +272,11 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   }
 
   private def getHashedKey(key : String) : String = {
-    keyHashingFunction.hashKey(key)
+    if(hashKeyPrefix) {
+      keyHashingFunction.hashKey(keyprefix + key)
+    } else {
+      keyHashingFunction.hashKey(key)
+    }
   }
 
   private def logCacheHit(key: String): Unit = {

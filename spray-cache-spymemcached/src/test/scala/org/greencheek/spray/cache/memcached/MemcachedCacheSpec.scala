@@ -174,6 +174,23 @@ abstract class MemcachedCacheSpec extends Specification {
 
 
     }
+    "provide a key prefix" in memcachedContext {
+      val cacheWithPrefixA = memcachedCache[String](getMemcachedHostsString.getOrElse("localhost:"+memcachedContext.memcached.port),binary = memcachedContext.binary,
+        timeToLive = Duration(10,SECONDS),keyPrefix = Some("A"))
+      val cacheWithPrefixB = memcachedCache[String](getMemcachedHostsString.getOrElse("localhost:"+memcachedContext.memcached.port),binary = memcachedContext.binary,
+        timeToLive = Duration(10,SECONDS),keyPrefix = Some("B"))
+      val cacheWithNoPrefixA = memcachedCache[String](getMemcachedHostsString.getOrElse("localhost:"+memcachedContext.memcached.port),binary = memcachedContext.binary,
+        timeToLive = Duration(10,SECONDS))
+      val cacheWithNoPrefixB = memcachedCache[String](getMemcachedHostsString.getOrElse("localhost:"+memcachedContext.memcached.port),binary = memcachedContext.binary,
+        timeToLive = Duration(10,SECONDS))
+
+      cacheWithPrefixA(15678)("A").await === "A"
+      cacheWithPrefixA(15678)("B").await === "A"
+      cacheWithPrefixB(15678)("F").await === "F"
+      cacheWithPrefixB(15678)("B").await === "F"
+      cacheWithNoPrefixA(15678)("F").await === "F"
+      cacheWithNoPrefixB(15678)("F").await === "F"
+    }
 
   }
 
@@ -182,14 +199,14 @@ abstract class MemcachedCacheSpec extends Specification {
   def memcachedCache[T](hosts: String, maxCapacity: Int = 500, initialCapacity: Int = 16,
                         timeToLive: Duration = Duration.Zero, timeToIdle: Duration = Duration.Zero,
                         binary : Boolean = true, waitForMemcachedSet : Boolean = false,
-                        allowFlush : Boolean = true, waitForMemcachedRemove : Boolean = false) = {
+                        allowFlush : Boolean = true, waitForMemcachedRemove : Boolean = false, keyPrefix : Option[String]= None) = {
     binary match {
       case true => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.BINARY,
         waitForMemcachedSet = waitForMemcachedSet, allowFlush = allowFlush, waitForMemcachedRemove = waitForMemcachedRemove,
-        removeWaitDuration = Duration(4,TimeUnit.SECONDS))
+        removeWaitDuration = Duration(4,TimeUnit.SECONDS), keyPrefix = keyPrefix)
       case false => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.TEXT,
         waitForMemcachedSet = waitForMemcachedSet,allowFlush = allowFlush, waitForMemcachedRemove = waitForMemcachedRemove,
-        removeWaitDuration = Duration(4,TimeUnit.SECONDS))
+        removeWaitDuration = Duration(4,TimeUnit.SECONDS), keyPrefix = keyPrefix)
     }
   }
 
