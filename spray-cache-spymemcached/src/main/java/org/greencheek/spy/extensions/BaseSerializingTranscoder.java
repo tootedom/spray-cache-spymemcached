@@ -121,7 +121,7 @@ public abstract class BaseSerializingTranscoder extends SpyObject {
         try {
             if (in != null) {
                 bis = new ThreadUnsafeByteArrayInputStream(in);
-                is = new ObjectInputStream(bis);
+                is = new ClassLoaderObjectInputStream(bis);
                 rv = is.readObject();
                 is.close();
                 bis.close();

@@ -67,6 +67,8 @@ abstract class MemcachedCacheSpec extends Specification {
       val option1 = cache("35")( future {
         try {
           Thread.sleep(1000)
+          System.out.println("Sleep End.. 35")
+          System.out.flush()
         } catch {
           case e: Exception => {
 
@@ -77,7 +79,9 @@ abstract class MemcachedCacheSpec extends Specification {
 
       val option2 = cache("45")( future {
         try {
-          Thread.sleep(1000)
+          Thread.sleep(500)
+          System.out.println("Sleep End.. 45")
+          System.out.flush()
         } catch {
           case e: Exception => {
 
