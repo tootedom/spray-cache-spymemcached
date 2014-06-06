@@ -18,135 +18,21 @@ import scala.Some
 import org.greencheek.spy.extensions.connection.CustomConnectionFactoryBuilder
 import org.greencheek.spy.extensions.hashing.{JenkinsHash => JenkinsHashAlgo, XXHashAlogrithm}
 import org.greencheek.spray.cache.memcached.keyhashing.JenkinsHash
+import org.greencheek.spray.cache.memcached.hostparsing.{CommaSeparatedHostAndPortStringParser, HostStringParser}
+import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.{AddressByNameHostResolver, HostResolver}
+import org.greencheek.spray.cache.memcached.hostparsing.connectionchecking.{TCPHostValidation, HostValidation}
 
 /*
  * Created by dominictootell on 26/03/2014.
  */
 object MemcachedCache {
-  private val logger : Logger = LoggerFactory.getLogger(classOf[MemcachedCache[Serializable]])
   private val DEFAULT_EXPIRY : Duration = Duration(60,TimeUnit.MINUTES)
-  private val DEFAULT_MEMCACHED_PORT : Int = 11211
-  private val DEFAULT_DNS_TIMEOUT : Duration = Duration(3,TimeUnit.SECONDS)
   private val DEFAULT_CAPACITY = 1000
   private val ONE_SECOND = Duration(1,TimeUnit.SECONDS)
 
   val XXHASH_ALGORITHM: HashAlgorithm = new XXHashAlogrithm
   val JENKINS_ALGORITHM: HashAlgorithm = new JenkinsHashAlgo
   val DEFAULT_ALGORITHM: HashAlgorithm = DefaultHashAlgorithm.KETAMA_HASH
-
-  private def validateMemcacheHosts(checkTimeout : Duration,
-                                    addressesToCheck : List[InetSocketAddress]) : List[InetSocketAddress] = {
-    var okAddresses : List[InetSocketAddress]= Nil
-    val addressChecker : AddressChecker = new TCPAddressChecker(checkTimeout.toMillis)
-    for(addy <- addressesToCheck) {
-        addressChecker.isAvailable(addy) match {
-          case true => {
-            okAddresses = addy :: okAddresses
-          }
-          case false => {
-            logger.error("Unable to connect to memcached node: {}", addy)
-          }
-        }
-    }
-    okAddresses
-  }
-  /**
-   * Takes the list of host and port pairs, interating over each in turn and attempting:
-   * resolve the hostname to an ip, and attempting a connection to the host on the given port
-   *
-   *
-   * @param nodes The list of ports to connect
-   * @param dnsLookupTimeout The amount of time to wait for a dns lookup to take.
-   * @return
-   */
-  private def returnSocketAddressesForHostNames(nodes: List[(String,Int)],
-                                                dnsLookupTimeout : Duration = DEFAULT_DNS_TIMEOUT): List[InetSocketAddress] = {
-    val addressLookupService = LookupService.create()
-
-    var workingNodes: List[InetSocketAddress] = Nil
-    for (hostAndPort <- nodes) {
-      var future: java.util.concurrent.Future[InetAddress] = null
-      val host = hostAndPort._1
-      val port = hostAndPort._2
-      try {
-        future = addressLookupService.getByName(host)
-        var ia: InetAddress = future.get(dnsLookupTimeout.toSeconds, TimeUnit.SECONDS)
-        if (ia == null) {
-          logger.error("Unable to resolve dns entry for the host: {}", host)
-        }
-        else
-        {
-          try {
-            workingNodes = new InetSocketAddress(ia,port ) :: workingNodes
-          }
-          catch {
-            case e: IllegalArgumentException => {
-              logger.error("Invalid port number has been provided for the memcached node: host({}),port({})", host, port)
-            }
-          }
-        }
-      }
-      catch {
-        case e: TimeoutException => {
-          logger.error("Problem resolving host name ({}) to an ip address in fixed number of seconds: {}", host, dnsLookupTimeout, e)
-        }
-        case e: Exception => {
-          logger.error("Problem resolving host name to ip address: {}", host)
-        }
-      }
-      finally {
-        if (future != null) future.cancel(true)
-      }
-    }
-    addressLookupService.shutdown()
-
-    workingNodes
-  }
-
-  /**
-   * Takes a string:
-   *
-   * url:port,url:port
-   *
-   * converting it to a list of 2 element string arrays:  [url,port],[url,port]
-   *
-   * @param urls
-   * @return
-   */
-  private def parseMemcachedNodeList(urls: String): List[(String,Int)] = {
-    if (urls == null) return Nil
-    val hostUrls = urls.trim
-    var memcachedNodes : List[(String,Int)] = Nil
-    for (url <- hostUrls.split(",")) {
-      var port: Int = DEFAULT_MEMCACHED_PORT
-      val indexOfPort = url.indexOf(':')
-      val host =  indexOfPort match {
-        case -1 => {
-          url.trim
-        }
-        case any => {
-          url.substring(0, any).trim
-        }
-      }
-
-      try {
-          port = Integer.parseInt(url.substring(indexOfPort + 1, url.length))
-          if(port > 65535) {
-            port = DEFAULT_MEMCACHED_PORT
-          }
-        }
-        catch {
-          case e: NumberFormatException => {
-            logger.info("Unable to parse memcached port number, not an integer")
-          }
-      }
-
-      if ( host.length != 0 ) {
-        memcachedNodes = (host, port) :: memcachedNodes
-      }
-    }
-    return memcachedNodes
-  }
 }
 
 
@@ -170,7 +56,11 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val waitForMemcachedRemove : Boolean = false,
                                    val removeWaitDuration : Duration = Duration(2,TimeUnit.SECONDS),
                                    val keyHashType : KeyHashType = NoKeyHash,
-                                   val keyPrefix : Option[String] = None) extends Cache[Serializable] {
+                                   val keyPrefix : Option[String] = None,
+                                   val hostStringParser : HostStringParser = CommaSeparatedHostAndPortStringParser,
+                                   val hostHostResolver : HostResolver = AddressByNameHostResolver,
+                                   val hostValidation : HostValidation = TCPHostValidation)
+  extends Cache[Serializable] {
 
   @volatile private var isEnabled = false
   @volatile private var memcached: MemcachedClientIF = null;
@@ -185,7 +75,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     case Some(prefix) => prefix
   }
 
-  private var parsedHosts : List[(String,Int)] =  MemcachedCache.parseMemcachedNodeList(memcachedHosts)
+  private var parsedHosts : List[(String,Int)] =  hostStringParser.parseMemcachedNodeList(memcachedHosts)
   parsedHosts match {
     case Nil => {
       if(throwExceptionOnNoHosts) {
@@ -195,7 +85,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       }
     }
     case hosts : List[(String,Int)] => {
-      var addresses : List[InetSocketAddress] = MemcachedCache.returnSocketAddressesForHostNames(parsedHosts,dnsConnectionTimeout)
+      var addresses : List[InetSocketAddress] = hostHostResolver.returnSocketAddressesForHostNames(parsedHosts,dnsConnectionTimeout)
       addresses match {
         case Nil => {
           if(throwExceptionOnNoHosts) {
@@ -206,7 +96,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         }
         case resolvedHosts : List[InetSocketAddress] => {
           if(doHostConnectionAttempt) {
-            addresses = MemcachedCache.validateMemcacheHosts(hostConnectionAttemptTimeout,resolvedHosts)
+            addresses = hostValidation.validateMemcacheHosts(hostConnectionAttemptTimeout,resolvedHosts)
           }
         }
       }
@@ -310,17 +200,25 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         logger.error("Unable to contact memcached", e)
         None
       }
+      case e: Throwable => {
+        logger.error("Exception thrown when communicating with memcached", e)
+        None
+      }
     }
   }
 
-  private def writeToDistributedCache(key: String, value : Serializable, timeToLive : Duration) : Unit = {
-    val entryTTL : Duration = timeToLive match {
+  private def getDuration(timeToLive : Duration) : Duration = {
+    timeToLive match {
       case Duration.Inf => Duration.Zero
       case Duration.MinusInf => Duration.Zero
       case Duration.Zero => Duration.Zero
       case x if x.lt(MemcachedCache.ONE_SECOND) => Duration.Zero
       case _  => timeToLive
     }
+  }
+
+  private def writeToDistributedCache(key: String, value : Serializable, timeToLive : Duration) : Unit = {
+    val entryTTL : Duration = getDuration(timeToLive)
 
     if( waitForMemcachedSet ) {
       val futureSet = memcached.set(key, entryTTL.toSeconds.toInt, value)

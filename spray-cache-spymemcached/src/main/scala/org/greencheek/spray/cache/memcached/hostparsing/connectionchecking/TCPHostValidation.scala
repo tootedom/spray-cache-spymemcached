@@ -6,7 +6,7 @@ import org.greencheek.dns.lookup.{TCPAddressChecker, AddressChecker}
 import org.slf4j.{Logger, LoggerFactory}
 
 
-class TCPHostValidation extends HostValidation{
+object TCPHostValidation extends HostValidation{
   private val logger : Logger = LoggerFactory.getLogger(classOf[HostValidation])
 
   def validateMemcacheHosts(checkTimeout : Duration,
