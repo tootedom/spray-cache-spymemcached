@@ -9,7 +9,7 @@
     <parent>
         <artifactId>spray-cache-extensions</artifactId>
         <groupId>org.greencheek.spray</groupId>
-        <version>0.1.13</version>
+        <version>0.1.14-SNAPSHOT</version>
     </parent>
     <properties>
         <header.basedir>${project.parent.basedir}</header.basedir>
