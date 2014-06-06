@@ -179,7 +179,8 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   private def getFromDistributedCache(key: String): Option[Future[Serializable]] = {
     try {
-        memcached.get(key) match {
+        val future =  memcached.asyncGet(key)
+        future.get(memcachedGetTimeout.toMillis,TimeUnit.MILLISECONDS) match {
           case null => {
             logCacheMiss(key)
             logger.debug("key {} not found in memcached", key)
