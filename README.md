@@ -5,6 +5,7 @@
     - [Thundering Herds](#thundering-herds)
         - [Memcached library, thundering herd, and how does it do it](#memcached-library-thundering-herd-and-how-does-it-do-it)
     - [Example Uses](#example-uses)
+        - [Max Capacity](#max-capacity)
         - [Specifying the Memcached hosts](#specifying-the-memcached-hosts)
         - [Specifying the Expiry of Items in memcached](#specifying-the-expiry-of-items-in-memcached)
         - [Specifying the Expiry of a single Item](#specifying-the-expiry-of-a-single-item)
@@ -48,7 +49,7 @@ The library is availble in maven central, and the dependency is as follows:
     <dependency>
       <groupId>org.greencheek.spray</groupId>
       <artifactId>spray-cache-spymemcached</artifactId>
-      <version>0.1.8</version>
+      <version>0.1.14</version>
     </dependency>
 
 The library was build using scala 2.10.x.  It has not be tested with scala 2.9.x.  Therefore, consider it only compatible
@@ -63,9 +64,11 @@ It is compiled against the latest version of spray.  The libraries depedencies a
     [INFO] |  +- io.spray:spray-util:jar:1.3.1:compile
     [INFO] |  +- org.scala-lang:scala-library:jar:2.10.3:compile
     [INFO] |  \- com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:jar:1.4:compile
-    [INFO] +- net.spy:spymemcached:jar:2.10.6:compile
+    [INFO] +- net.spy:spymemcached:jar:2.11.3:compile
     [INFO] +- com.twitter:jsr166e:jar:1.1.0:compile
     [INFO] +- org.slf4j:slf4j-api:jar:1.7.6:compile
+    [INFO] +- net.jpountz.lz4:lz4:jar:1.2.0:compile
+    [INFO] +- org.iq80.snappy:snappy:jar:0.3:compile
 
 The akka library is a requirement for spray, and therefore is a `provided` dependency:
 
@@ -99,7 +102,7 @@ request compute the value, all the requests wait on the 1 invocation of the valu
 ### Memcached library, thundering herd, and how does it do it  ###
 
 There is really no real difference between the SimpleLruCache (https://github.com/spray/spray/blob/v1.2.1/spray-caching/src/main/scala/spray/caching/LruCache.scala#L54)
-and the memcached library implementation.  When two request come for the same key, the future is stored in an internal
+and the memcached library implementation.  When two requests come for the same key, the future is stored in an internal
 ConcurrentLinkedHashMap:
 
     store.putIfAbsent(keyString, promise.future)
@@ -166,6 +169,39 @@ The below will give a couple of example code snippets for using, and configuring
 - The hosts to connect to
 - The expiry of items
 - The timeout of a get request
+
+----
+
+### Max Capacity ###
+
+As described previously, when the cache is used a future associated with the calculation of the value that is to be
+subsequently stored in the cache  is added to an internal ConcurrentLinkedHashMap.
+
+
+When a requests come for a key, the future is stored in the internal ConcurrentLinkedHashMap:
+ 
+     store.putIfAbsent(keyString, promise.future)
+ 
+If a subsequent request comes in for the same key, and the future has not completed yet, the existing future in the
+ConcurrentLinkedHashMap is returned.
+ 
+When constructing the MemcachedCache, you can specify the max size of this internal ConcurrentLinkedHash map:
+ 
+     new MemcachedCache[String](maxCapacity = 500)
+ 
+With the original SimpleLruCache and the Expiring variant, when the future completes the value is stored by reference in the
+ConcurrentLinkedHashMap, associated to a Promise's value.  With this memcached library the value is stored asynchronously
+in memcached, and the future completed and removed from the ConcurrentLinkedHashMap.  Therefore, there is a slim time period,
+between the completion of the future and the value being saved in memcached.  This means a subsequent request for the same key
+could be a cache miss.
+ 
+If you wish to wait for a period (i.e. make the asynchronous set into memcached call semi synchronous), you can construct
+the memcached cached requesting this.  The follow will wait for the memcached set to complete, waiting for a maximum of
+1 second.
+ 
+    new MemcachedCache[String](maxCapacity = 500,
+                               waitForMemcachedSet = true,
+                               setWaitDuration = Duration(1,TimeUnit.SECONDS))
 
 ----
 
@@ -400,7 +436,21 @@ key as the item is stored against; `keyPrefix = Some("product")`:
 
 ### Server Hash Algorithm ###
 
-`hashAlgorithm`
+By default the memcached implementation uses Ketama Consistent Hashing for the node locator (distribution of the memcached servers) as described here:
+(http://www.last.fm/user/RJ/journal/2007/04/10/rz_libketama_-_a_consistent_hashing_algo_for_memcache_clients).  
+
+The memcached key is hashed to a number (unsigned int), which is then mapped to the memcached node that is closest to that
+integer value.  The generation of the unsigned int is performed by a hashing algorithm.  This hashing algorithm can be configured
+at construction time by the parameter: `hashAlgorithm`.  It can take one of the following values:
+
+- `MemcachedCache.XXHASH_ALGORITHM`
+- `MemcachedCache.JENKINS_ALGORITHM`
+- `MemcachedCache.DEFAULT_ALGORITHM
+
+The `MemcachedCache.DEFAULT_ALGORITHM` is that of `DefaultHashAlgorithm.KETAMA_HASH`.  An example is the following:
+ 
+    new MemcachedCache[SimpleClass](Duration.Zero, 10000, "localhost:11211", protocol = Protocol.TEXT,
+         waitForMemcachedSet = true, keyHashType = SHA256KeyHash, hashAlgorithm = MemcachedCache.XXHASH_ALGORITHM)
 
 
 ### Specifying GET Timeout ###

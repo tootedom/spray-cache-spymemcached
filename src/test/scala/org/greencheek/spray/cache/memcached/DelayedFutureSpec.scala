@@ -67,7 +67,7 @@ class DelayedFutureSpec extends Specification {
     }
     "store case class object" in memcachedContext {
       val cache = new MemcachedCache[SimpleClass](Duration.Zero, 10000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
-        waitForMemcachedSet = true, allowFlush = false, keyHashType = SHA256KeyHash)
+        waitForMemcachedSet = true, allowFlush = false, keyHashType = SHA256KeyHash, hashAlgorithm = MemcachedCache.XXHASH_ALGORITHM)
 
       val option1 = cache("35")(future {
         try {
