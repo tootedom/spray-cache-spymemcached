@@ -4,7 +4,6 @@ import  org.openjdk.jmh.runner.options._
 import org.openjdk.jmh.output.results.ResultFormatType
 import org.openjdk.jmh.runner.Runner
 import java.util.concurrent.TimeUnit
-import org.openjdk.jmh.annotations.Mode
 import org.greencheek.spray.cache.memcached.perf.benchmarks.JvmArgs
 
 /**
@@ -19,7 +18,7 @@ object BenchmarkRunner {
       .warmupIterations(20)
       .measurementIterations(20)
       .timeUnit(TimeUnit.MILLISECONDS)
-      .jvmArgs(JvmArgs.getJvmArgs)
+      .jvmArgs(JvmArgs.getJvmArgs():_*)
       .forks(3)
       .threads(2)
       .resultFormat(ResultFormatType.TEXT)
