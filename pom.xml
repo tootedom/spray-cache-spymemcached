@@ -1,56 +1,26 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.greencheek.spray</groupId>
-    <artifactId>spray-cache-extensions</artifactId>
-    <packaging>pom</packaging>
+    <artifactId>spray-cache-spymemcached</artifactId>
     <version>0.1.15-SNAPSHOT</version>
-    <inceptionYear>2014</inceptionYear>
-    <name>spray-caching-extensions</name>
-    <description>A Couple of Caching Extensions for Spray</description>
-    <url>https://github.com/tootedom/spray-cache-extensions</url>
-    <!-- Required: license information: -->
-    <licenses>
-        <license>
-            <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-            <distribution>repo</distribution>
-            <comments>A business-friendly OSS license</comments>
-        </license>
-    </licenses>
-    <modules>
-        <module>spray-cache-spymemcached</module>
-    </modules>
-    <!-- Required: developer information: -->
-    <developers>
-        <developer>
-            <id>tootedom</id>
-            <name>Dominic Tootell</name>
-            <email>dominic.tootell@relateit.io</email>
-            <organization>greencheek.org</organization>
-            <organizationUrl>https://github.com/tootedom</organizationUrl>
-            <url>https://github.com/tootedom</url>
-        </developer>
-    </developers>
-    <scm>
-        <connection>scm:git:git@github.com:tootedom/spray-cache-extensions.git</connection>
-        <url>scm:git:git@github.com:tootedom/spray-cache-extensions.git</url>
-        <developerConnection>scm:git:git@github.com:tootedom/spray-cache-extensions.git</developerConnection>
-        <tag>spray-cache-extensions-0.1.11</tag>
-    </scm>
+    <packaging>jar</packaging>
+    <name>Spray Spy Memcached Cache Implementation</name>
+    <description>Spy Memcached Backend for the Spray Cache API</description>
+    <url>https://github.com/tootedom/spray-cache-spymemcached</url>
     <properties>
-        <header.basedir>${project.basedir}</header.basedir>
-        <maven-surefire-plugin.version>2.16</maven-surefire-plugin.version>
-        <scala.version>2.10.3</scala.version>
-        <spray.version>1.3.1</spray.version>
-
+        <spy.version>2.11.3</spy.version>
+        <jsr666e.version>1.1.0</jsr666e.version>
         <slf4j.version>1.7.6</slf4j.version>
-        <grizzled-slf4j.version>1.0.1</grizzled-slf4j.version>
+        <memcachedtest.version>1.0.0</memcachedtest.version>
+        <finaglememcached.version>6.13.1</finaglememcached.version>
+        <xxhashing.version>1.2.0</xxhashing.version>
+        <jsnappy.version>0.3</jsnappy.version>
         <logback.version>1.1.1</logback.version>
-        <junit.version>4.11</junit.version>
-        <specs2.version>1.13</specs2.version>
+        <spray.version>1.3.1</spray.version>
         <akka.version>2.3.0</akka.version>
-        <camel-jms.version>2.12.3</camel-jms.version>
         <scalatest.version>2.1.0</scalatest.version>
+        <specs2.version>1.13</specs2.version>
+        <junit.version>4.11</junit.version>
 
         <maven-compiler-plugin.version>3.1</maven-compiler-plugin.version>
         <maven-source-plugin.version>2.2.1</maven-source-plugin.version>
@@ -64,6 +34,31 @@
         <maven-shade-plugin.version>2.2</maven-shade-plugin.version>
         <maven-site-plugin.version>3.3</maven-site-plugin.version>
     </properties>
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+            <comments>A business-friendly OSS license</comments>
+        </license>
+    </licenses>
+    <!-- Required: developer information: -->
+    <developers>
+        <developer>
+            <id>tootedom</id>
+            <name>Dominic Tootell</name>
+            <email>dominic.tootell@relateit.io</email>
+            <organization>greencheek.org</organization>
+            <organizationUrl>https://github.com/tootedom</organizationUrl>
+            <url>https://github.com/tootedom</url>
+        </developer>
+    </developers>
+    <scm>
+        <connection>scm:git:git@github.com:tootedom/spray-cache-spymemcached.git</connection>
+        <url>scm:git:git@github.com:tootedom/spray-cache-spymemcached.git</url>
+        <developerConnection>scm:git:git@github.com:tootedom/spray-cache-spymemcached.git</developerConnection>
+        <tag>spray-cache-spymemcached-0.1.11</tag>
+    </scm>
     <repositories>
         <repository>
             <id>scala-tools.org</id>
@@ -98,6 +93,7 @@
             <id>twitter-twttr</id>
             <url>http://maven.twttr.com/</url>
         </repository>
+
     </repositories>
     <pluginRepositories>
         <pluginRepository>
@@ -108,7 +104,7 @@
 
         <pluginRepository>
             <id>tims-repo</id>
-            <url>http://timezra.github.com/maven/releases </url>
+            <url>http://timezra.github.com/maven/releases</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
@@ -142,6 +138,57 @@
             <scope>provided</scope>
         </dependency>
 
+
+        <dependency>
+            <groupId>net.spy</groupId>
+            <artifactId>spymemcached</artifactId>
+            <version>${spy.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.twitter</groupId>
+            <artifactId>jsr166e</artifactId>
+            <version>${jsr666e.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.jpountz.lz4</groupId>
+            <artifactId>lz4</artifactId>
+            <version>${xxhashing.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.iq80.snappy</groupId>
+            <artifactId>snappy</artifactId>
+            <version>${jsnappy.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.thimbleware.jmemcached</groupId>
+            <artifactId>jmemcached-core</artifactId>
+            <version>${memcachedtest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>0.8</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>0.8</version>
+            <scope>test</scope>
+        </dependency>
         <!-- test -->
         <dependency>
             <groupId>junit</groupId>
@@ -161,36 +208,14 @@
             <version>${scalatest.version}</version>
             <scope>test</scope>
         </dependency>
-    </dependencies>
 
+    </dependencies>
     <build>
         <plugins>
-            <!--<plugin>-->
-                <!--<groupId>org.codehaus.mojo</groupId>-->
-                <!--<artifactId>build-helper-maven-plugin</artifactId>-->
-                <!--<version>1.8</version>-->
-                <!--<executions>-->
-                    <!--<execution>-->
-                        <!--<id>add-source</id>-->
-                        <!--<phase>generate-test-sources</phase>-->
-                        <!--<goals>-->
-                            <!--<goal>add-source</goal>-->
-                        <!--</goals>-->
-                        <!--<configuration>-->
-                            <!--<sources>-->
-                                <!--<source>${project.basedir}/src/test/scala</source>-->
-                                <!--<source>${project.basedir}/target/generated-sources/jmh</source>-->
-                            <!--</sources>-->
-                        <!--</configuration>-->
-                    <!--</execution>-->
-                <!--</executions>-->
-            <!--</plugin>-->
-
-
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.7.0.201403182114</version>
+                <version>0.7.1.201405082137</version>
                 <executions>
                     <!--
                        Prepares the property pointing to the JaCoCo runtime agent which
@@ -359,6 +384,130 @@
                 <artifactId>maven-scm-plugin</artifactId>
                 <version>1.1</version>
             </plugin>
+
+            <!-- JMH Here: -->
+
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <id>add-source</id>
+                        <phase>process-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/src/performance-test/java</source>
+                                <source>${project.basedir}/src/performance-test/scala</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                2. Compile Scala sources
+              -->
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>${scala-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>process-sources</phase>
+                        <id>main-scalac</id>
+                        <goals>
+                            <goal>add-source</goal>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <args>
+                                <arg>-encoding</arg>
+                                <arg>UTF-8</arg>
+                                <arg>-target:jvm-1.6</arg>
+                                <arg>-deprecation</arg>
+                                <arg>-feature</arg>
+                                <arg>-unchecked</arg>
+                                <arg>-language:implicitConversions</arg>
+                                <arg>-language:reflectiveCalls</arg>
+                                <arg>-language:postfixOps</arg>
+                            </args>
+                            <jvmArgs>
+                                <jvmArg>-Xms256m</jvmArg>
+                                <jvmArg>-Xmx1024m</jvmArg>
+                                <jvmArg>-XX:MaxPermSize=512m</jvmArg>
+                            </jvmArgs>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <phase>process-test-sources</phase>
+                        <id>test-scalac</id>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <args>
+                                <arg>-encoding</arg>
+                                <arg>UTF-8</arg>
+                                <arg>-target:jvm-1.6</arg>
+                                <arg>-deprecation</arg>
+                                <arg>-feature</arg>
+                                <arg>-unchecked</arg>
+                                <arg>-language:implicitConversions</arg>
+                                <arg>-language:reflectiveCalls</arg>
+                                <arg>-language:postfixOps</arg>
+                            </args>
+                            <jvmArgs>
+                                <jvmArg>-Xms256m</jvmArg>
+                                <jvmArg>-Xmx1024m</jvmArg>
+                                <jvmArg>-XX:MaxPermSize=512m</jvmArg>
+                            </jvmArgs>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>doc-jar</goal>
+                        </goals>
+                        <configuration>
+                            <jvmArgs>
+                                <jvmArg>-Xms64m</jvmArg>
+                                <jvmArg>-Xmx1024m</jvmArg>
+                                <jvmArg>-XX:MaxPermSize=512m</jvmArg>
+                            </jvmArgs>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/main/assembly/test-jar-with-dependencies.xml</descriptor>
+                    </descriptors>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.greencheek.spray.cache.memcached.performancetest.runner.BenchmarkRunner</mainClass>
+                        </manifest>
+                    </archive>
+                    <finalName>performancetests</finalName>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <!-- Include the README, NOTICE and LICENSE files: -->
         <resources>
@@ -442,6 +591,5 @@
                 </plugins>
             </build>
         </profile>
-
     </profiles>
 </project>
