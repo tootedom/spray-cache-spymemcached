@@ -14,8 +14,9 @@
         - [Cache Key](#cache-key)
         - [Cache Key Prefix](#cache-key-prefix)
         - [Specifying GET Timeout](#specifying-get-timeout)
+        - [Specifying SET Timeout](#specifying-set-timeout)
         - [Consistent Hashing](#consistent-hashing)
-        - [Caching Serializable Objects](#caching-serializable-objects)
+        - [Caching Serializable Objects](#caching-serializable-objects)        
 
 ----
 
@@ -467,6 +468,22 @@ memcachedGetTimeout
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
                                                           protocol = Protocol.TEXT, keyHashType = SHA256KeyHash,
                                                           memcachedGetTimeout = Duration(1,TimeUnit.SECONDS))
+                                                          
+### Specifying SET Timeout ###
+                                                          
+As mentioned previous, a ConcurrentLinkHashMap is used internally to store future objects; whilst the cache value is calculated.
+When the cache value has been computed is ready for storing in memcached, the future is removed from the internal map. 
+The set on memcached is done asynchronously in the background.  Therefore, there is a slim time period, between the 
+completion of the future and the value being saved in memcached.  This means a subsequent request for the same key could 
+be a cache miss; and result in both the value being calculated and then set in memcached.
+
+Therefore it is recommended that you wait for a period of time for the memcached set to complete  (i.e. make the asynchronous set into 
+memcached call semi synchronous).  This is done at cache construction time.   The follow will wait for the memcached set to complete,
+waiting for a maximum of 1 second.
+
+    new MemcachedCache[String](waitForMemcachedSet = true,
+                               setWaitDuration = Duration(1,TimeUnit.SECONDS))
+                                                          
 
 ----
 
