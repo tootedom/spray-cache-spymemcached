@@ -11,6 +11,7 @@
         - [No Expiry](#no-expiry)
         - [Using the Binary or Text Protocol](#using-the-binary-or-text-protocol)
         - [Cache Key](#cache-key)
+        - [Cache Key Prefix](#cache-key-prefix)
         - [Specifying GET Timeout](#specifying-get-timeout)
         - [Consistent Hashing](#consistent-hashing)
         - [Caching Serializable Objects](#caching-serializable-objects)
@@ -256,8 +257,11 @@ of hash representations of the key:
 
 - SHA256
 - MD5
+- JenkinsHash
+- XXHash
 
-To used either of these you need to specify the hashing method to be used at cache construction time:
+To used either of these you need to specify the hashing method to be used at cache construction time.  For the best performance,
+XXHash is recommended:
 
 #### MD5 ####
 
@@ -294,11 +298,110 @@ restrictive in size and characters, when using the TEXT protocol.
 
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
                                                                   protocol = Protocol.TEXT, keyHashType = null)
+                                                                  
+                                                                  
+### XXHash ###
 
+The xx hash implementation is that of lz4-java (https://github.com/jpountz/lz4-java/tree/master/src/java/net/jpountz/xxhash).
+Of which there are two implementations.  A Pure Java version, and a JNI version.                                                                  
+                                                                
+Java Version:
+                                                                  
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                                  protocol = Protocol.TEXT, keyHashType = XXJavaHash)
+                                                                  
 
+JNI Version:
+                                                                  
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                                  protocol = Protocol.TEXT, keyHashType = XXNativeJavaHash)                                                                  
+                                                                                                                                    
+
+### Jenkins ###
+
+The Jenkins hash is taken from xmemcached (https://github.com/killme2008/xmemcached/blob/master/src/main/java/net/rubyeye/xmemcached/HashAlgorithm.java): 
+                                                                                                                                    
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                                  protocol = Protocol.TEXT, keyHashType = JenkinsHash)                                                                                                                                    
 
 
 ----
+
+### Cache Key Prefix ###
+
+You may have several in memory caches in your application that you wish to migrate to a using a shared distributed cache. 
+However, as this means you effectively now have just a single cache rather that many; suddenly you have key collisions, or worse
+`ClassCastExceptions` at runtime as a cache is expecting one object type, but returns another.
+
+For example you may have had the follow, that stores `Product` and `ProductCategories` in two separate caches.  The key for the
+cache item is `ProductId` which can be the same.:
+
+    @SerialVersionUID(1l) case class ProductId(id : String)
+    @SerialVersionUID(1l) case class Product(description : String)
+    @SerialVersionUID(1l) case class ProductCategories(category : Seq[String])
+    
+    val productId = ProductId("1a")
+    val fridge = Product("huge smeg")
+    val fridgeCategories = ProductCategories(Seq("kitchen","home","luxury"))
+        
+    val categoryCache: Cache[ProductCategories] = new SimpleLruCache[ProductCategories](10,10)
+    val productCache: Cache[Product] = new SimpleLruCache[Product](10,10)
+    
+    categoryCache(productId)(fridgeCategories).await === fridgeCategories
+    productCache(productId)(fridge).await === fridge
+    categoryCache.get(productId).get.await == fridgeCategories
+            
+            
+If you were to convert the above directly, replacing the two caches with memcached equivalent, you would obtain a 
+`ClassCastException` when looking the item in the `productCache`.  The reason being the Memcached is a shared distributed
+cache.  This means the cache keys are shared amongst all the cache objects.
+
+    @SerialVersionUID(1l) case class ProductId(id : String)
+    @SerialVersionUID(1l) case class Product(description : String)
+    @SerialVersionUID(1l) case class ProductCategories(category : Seq[String])
+    
+    val productId = ProductId("1a")
+    val fridge = Product("huge smeg")
+    val fridgeCategories = ProductCategories(Seq("kitchen","home","luxury"))
+
+    val categoryCache: Cache[ProductCategories] = new MemcachedCache[ProductCategories](memcachedHosts = memcachedHosts, protocol = Protocol.TEXT,
+      timeToLive = Duration(5, TimeUnit.SECONDS), waitForMemcachedSet = true, keyHashType = XXJavaHash)
+    val productCache: Cache[Product] = new MemcachedCache[Product](memcachedHosts = memcachedHosts, protocol = Protocol.TEXT,
+      timeToLive = Duration(5, TimeUnit.SECONDS), waitForMemcachedSet = true, keyHashType = XXJavaHash)
+
+    categoryCache(productId)(fridgeCategories).await === fridgeCategories
+    productCache(productId)(fridge).await must throwA[ClassCastException]
+    categoryCache.get(productId).get.await == fridgeCategories
+    
+    
+To avoid this, a `keyPrefix` option is available on the `MemcachedCache`.  This takes a String that is pre-pended to the
+key as the item is stored against; `keyPrefix = Some("product")`:
+
+
+    @SerialVersionUID(1l) case class ProductId(id : String)
+    @SerialVersionUID(1l) case class Product(description : String)
+    @SerialVersionUID(1l) case class ProductCategories(category : Seq[String])
+    
+    val productId = ProductId("1a")
+    val fridge = Product("huge smeg")
+    val fridgeCategories = ProductCategories(Seq("kitchen","home","luxury"))
+
+    val categoryCache: Cache[ProductCategories] = new MemcachedCache[ProductCategories](memcachedHosts = memcachedHosts, protocol = Protocol.TEXT,
+      timeToLive = Duration(5, TimeUnit.SECONDS), waitForMemcachedSet = true, keyHashType = XXJavaHash, keyPrefix = Some("productcategories"))
+    val productCache: Cache[Product] = new MemcachedCache[Product](memcachedHosts = memcachedHosts, protocol = Protocol.TEXT,
+      timeToLive = Duration(5, TimeUnit.SECONDS), waitForMemcachedSet = true, keyHashType = XXJavaHash, keyPrefix = Some("product"))
+
+
+    categoryCache(productId)(fridgeCategories).await === fridgeCategories
+    productCache(productId)(fridge).await === fridge
+    categoryCache.get(productId).get.await == fridgeCategories    
+
+----
+
+### Server Hash Algorithm ###
+
+`hashAlgorithm`
+
 
 ### Specifying GET Timeout ###
 
@@ -334,33 +437,74 @@ However, if you have no reason to use a different hashing algorithm; you are bes
 ### Caching Serializable Objects ###
 
 As mentioned previously memcached uses `String` keys, and values are binary objects (i.e. Object must be `Serializable`).
+Case classes by default extend the scala Serializable trait which extends the Java Serializable interface.  
 
-    case class MyCase(val name : String,val millis : Long = System.currentTimeMillis())
+Remember you need to assign you class a @SerialVersionUID to avoid any runtime `java.io.InvalidClassException` that may 
+result in a changing serialVersionUID value when additional method (but no state changes) are made to a class.  The reason
+being that the items within memcached may be cached for longer that your current application version.  You may release
+ a new version of an application, which fetches a cached serialized object from the old application.  If the serialVersionUID is
+ created by the compiler, you are more likely to hit the `InvalidClassException` or a `ClassNotFoundException`
 
-    val cache = new MemcachedCache[Serializable] ( memcachedHosts = hosts, protocol = Protocol.TEXT,
-            timeToLive = Duration(5,TimeUnit.SECONDS),waitForMemcachedSet = true)
-
-
-    val madoff = new MyCase("Madoff")
-    val victim = new MyCase("actorX")
-
-    cache("PonziScheme")(madoff).await === madoff
-    // Wait for a bit.. item is still cached (5 second expiry)
-
-    Thread.sleep(2000)
-    cache.get("PonziScheme") must beSome
-    cache.get("PonziScheme").get.await === madoff
-
-    // Use the expensive operation method, this returns as it's in memcached
-    cachedOp(cache,"PonziScheme").await === madoff
-    cachedOp(cache,"PonziScheme").await !== victim
-
-    // if we have an "expensive" operation
-    def expensiveOp(name : String = "Madoff"): MyCase = {
-      Thread.sleep(500)
-      new MyCase(name)
+````java
+    import org.greencheek.spray.cache.memcached.MemcachedCache
+    import org.greencheek.util.memcached.WithMemcached
+    import org.specs2.mutable.Specification
+    import net.spy.memcached.ConnectionFactoryBuilder.Protocol
+    import scala.concurrent.duration.Duration
+    import java.util.concurrent.TimeUnit
+    import spray.util._
+    import scala.concurrent._
+    import ExecutionContext.Implicits.global
+    import spray.caching.Cache
+    import org.greencheek.spray.cache.memcached.keyhashing.XXJavaHash
+    
+    
+    @SerialVersionUID(1l) case class PonziScheme(owner : Person, victims : Seq[Person])
+    
+    @SerialVersionUID(2l) case class Person(val firstName : String,val lastName : String) {
+      private val fullName = firstName + " " + lastName
+      override def toString() : String = {
+        fullName
+      }
     }
+        
+    
+    class SerializationExampleSpec extends Specification {
+      val memcachedContext = WithMemcached(false)
+    
+      "Example case class serialization" in memcachedContext {
+        val memcachedHosts = "localhost:" + memcachedContext.memcached.port
+        val cache: Cache[PonziScheme] = new MemcachedCache[PonziScheme](memcachedHosts = memcachedHosts, protocol = Protocol.TEXT,
+          timeToLive = Duration(5, TimeUnit.SECONDS), waitForMemcachedSet = true, keyHashType = XXJavaHash)
+    
+    
+        val madoff = new Person("Bernie","Madoff")
+        val victim1 = new Person("Kevin","Bacon")
+        val victim2 = new Person("Kyra", "Sedgwick")
+    
+        val madoffsScheme = new PonziScheme(madoff,Seq(victim1,victim2))
+    
+        cache(madoff)(madoffsScheme).await === madoffsScheme
+        // Wait for a bit.. item is still cached (5 second expiry)
+        Thread.sleep(2000)
+        cache.get(madoff) must beSome
+        cache.get(madoff).get.await.owner === madoff
 
-    def cachedOp[T](cache : Cache[Serializable],key: T): Future[Serializable] = cache(key) {
-      expensiveOp()
+        // Use the expensive operation method, this returns as it's in memcached
+        cachedOp(cache, madoff).await === madoffsScheme
+        cachedOp(cache, Person("Charles","Ponzi")).await === new PonziScheme(Person("Charles","Ponzi"),Seq(Person("Rose","Gnecco")))
+
+        // if we have an "expensive" operation
+        def expensiveOp(): PonziScheme = {
+          Thread.sleep(500)
+          new PonziScheme(Person("Charles","Ponzi"),Seq(Person("Rose","Gnecco")))
+        }
+
+        def cachedOp[T](cache: Cache[PonziScheme], key: T): Future[PonziScheme] = cache(key) {
+          expensiveOp()
+        }
+    
+        true
+      }
     }
+````    
