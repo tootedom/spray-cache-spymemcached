@@ -34,6 +34,8 @@ public class SimpleSmallGetBenchmark {
     }
 
     public static void main(String[] args) throws RunnerException {
+
+
         Options opts  = new OptionsBuilder()
                 .include("org.greencheek.spray.cache.memcached.perf.benchmarks.SimpleSmallGetBenchmark.*")
                 .warmupIterations(20)
@@ -41,7 +43,7 @@ public class SimpleSmallGetBenchmark {
                 .timeUnit(TimeUnit.MILLISECONDS)
                 .threads(2)
                 .forks(3)
-                .jvmArgs("-server")
+                .jvmArgs(JvmArgs.getJvmArgs())
                 .resultFormat(ResultFormatType.TEXT)
                 .verbosity(VerboseMode.EXTRA)
                 .build();

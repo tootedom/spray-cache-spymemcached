@@ -34,7 +34,7 @@ public class SimpleLargeGetBenchmark {
                 .timeUnit(TimeUnit.MILLISECONDS)
                 .threads(2)
                 .forks(3)
-                .jvmArgs("-server")
+                .jvmArgs(JvmArgs.getJvmArgs())
                 .resultFormat(ResultFormatType.TEXT)
                 .verbosity(VerboseMode.EXTRA)
                 .build();
