@@ -4,6 +4,7 @@ import org.greencheek.spray.cache.memcached.MemcachedCache
 import org.greencheek.spray.cache.memcached.keyhashing.XXJavaHash
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
 import org.greencheek.spray.cache.memcached.perf.state.{LargeCacheObject, SmallCacheObject}
+import org.greencheek.spy.extensions.FastSerializingTranscoder
 
 /**
  * Created by dominictootell on 01/06/2014.
@@ -35,6 +36,16 @@ object CacheFactory {
       maxCapacity = 10,
       keyHashType = XXJavaHash,
       protocol =  Protocol.TEXT
+    )
+  }
+
+  def createLargeXXJavaTextCacheWithFST : MemcachedCache[LargeCacheObject] = {
+    new MemcachedCache[LargeCacheObject](
+      memcachedHosts = System.getProperty("memcached.hosts","localhost:11211"),
+      maxCapacity = 10,
+      keyHashType = XXJavaHash,
+      protocol =  Protocol.TEXT,
+      serializingTranscoder =  new FastSerializingTranscoder
     )
   }
 
