@@ -39,6 +39,8 @@
                 <include>io.spray:spray-util</include>
                 <include>com.typesafe.akka:akka-actor_2.10</include>
                 <include>com.typesafe:config</include>
+                <include>de.ruedigermoeller:fst</include>
+                <include>org.javassist:javassist</include>
             </includes>
         </dependencySet>
     </dependencySets>
