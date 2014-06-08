@@ -1,9 +1,6 @@
 package org.greencheek.spray.cache.memcached.perf.benchmarks;
 
-import org.greencheek.spray.cache.memcached.perf.state.SmallCacheKey;
-import org.greencheek.spray.cache.memcached.perf.state.SmallCacheObject;
-import org.greencheek.spray.cache.memcached.perf.state.XXJavaHashSmallTextBenchmarkCache;
-import org.greencheek.spray.cache.memcached.perf.state.XXJavaHashSmallTextHashAlgoBenchmarkCache;
+import org.greencheek.spray.cache.memcached.perf.state.*;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.GenerateMicroBenchmark;
 import org.openjdk.jmh.annotations.Mode;
@@ -32,6 +29,13 @@ public class SimpleSmallGetBenchmark {
     public SmallCacheObject simpleHashAlgoGet(SmallCacheKey key, SmallCacheObject value,XXJavaHashSmallTextHashAlgoBenchmarkCache cache) {
         return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.simpleHashAlgoGet(key, value, cache);
     }
+
+    @GenerateMicroBenchmark
+    @BenchmarkMode({Mode.SampleTime})
+    public SmallCacheObject simpleAsciiOnlyHashAlgoGet(SmallCacheKey key, SmallCacheObject value,AsciiOnlyXXJavaHashSmallTextBenchmarkCache cache) {
+        return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.simpleAsciiOnlyHashAlgoGet(key, value, cache);
+    }
+
 
     public static void main(String[] args) throws RunnerException {
 

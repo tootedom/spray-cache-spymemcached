@@ -12,7 +12,7 @@ class XXKeyHashing(allowNative : Boolean) extends KeyHashing {
     case false => XXHashFactory.fastestJavaInstance();
   }
 
-  override def hashKey(key: String): String = {
+  def getBytes(key : String) : Array[Byte] = {
     var bytes: Array[Byte] = null
     try {
       bytes = key.getBytes("UTF-8")
@@ -22,6 +22,11 @@ class XXKeyHashing(allowNative : Boolean) extends KeyHashing {
         bytes = key.getBytes
       }
     }
+    bytes
+  }
+
+  override def hashKey(key: String): String = {
+    val bytes: Array[Byte] = getBytes(key)
     return hash(bytes, 0, bytes.length)
   }
 

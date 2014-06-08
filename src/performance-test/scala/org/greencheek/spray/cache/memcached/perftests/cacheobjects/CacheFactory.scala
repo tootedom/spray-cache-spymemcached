@@ -36,6 +36,16 @@ object CacheFactory {
       keyHashType = XXJavaHash,
       protocol =  Protocol.TEXT
     )
+  }
 
+  def createAsciiOnlySmallXXJavaTextXXHashCache : MemcachedCache[SmallCacheObject] = {
+    new MemcachedCache[SmallCacheObject](
+      memcachedHosts = System.getProperty("memcached.hosts","localhost:11211"),
+      maxCapacity = 10,
+      keyHashType = XXJavaHash,
+      protocol =  Protocol.TEXT,
+      asciiOnlyKeys = true,
+      hashAlgorithm = MemcachedCache.XXHASH_ALGORITHM
+    )
   }
 }

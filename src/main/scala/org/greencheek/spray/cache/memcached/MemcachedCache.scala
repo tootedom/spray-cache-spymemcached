@@ -16,11 +16,12 @@ import scala.collection.JavaConversions._
 import org.greencheek.spray.cache.memcached.keyhashing._
 import scala.Some
 import org.greencheek.spy.extensions.connection.CustomConnectionFactoryBuilder
-import org.greencheek.spy.extensions.hashing.{JenkinsHash => JenkinsHashAlgo, XXHashAlogrithm}
-import org.greencheek.spray.cache.memcached.keyhashing.JenkinsHash
+import org.greencheek.spy.extensions.hashing.{JenkinsHash => JenkinsHashAlgo, AsciiXXHashAlogrithm, XXHashAlogrithm}
 import org.greencheek.spray.cache.memcached.hostparsing.{CommaSeparatedHostAndPortStringParser, HostStringParser}
 import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.{AddressByNameHostResolver, HostResolver}
 import org.greencheek.spray.cache.memcached.hostparsing.connectionchecking.{TCPHostValidation, HostValidation}
+import scala.Some
+import scala.Some
 
 /*
  * Created by dominictootell on 26/03/2014.
@@ -57,6 +58,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val removeWaitDuration : Duration = Duration(2,TimeUnit.SECONDS),
                                    val keyHashType : KeyHashType = NoKeyHash,
                                    val keyPrefix : Option[String] = None,
+                                   val asciiOnlyKeys : Boolean = false,
                                    val hostStringParser : HostStringParser = CommaSeparatedHostAndPortStringParser,
                                    val hostHostResolver : HostResolver = AddressByNameHostResolver,
                                    val hostValidation : HostValidation = TCPHostValidation)
@@ -111,7 +113,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
             case true => new ConnectionFactoryBuilder();
             case false => new CustomConnectionFactoryBuilder();
           }
-          builder.setHashAlg(hashAlgorithm)
+          builder.setHashAlg(createHashAlgorithm(asciiOnlyKeys,hashAlgorithm))
           builder.setLocatorType(hashingType)
           builder.setProtocol(protocol)
           builder.setReadBufferSize(readBufferSize)
@@ -124,6 +126,19 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       }
     }
 
+  }
+
+  private def createHashAlgorithm(asciiOnlyKeys : Boolean, hashAlgorithm : HashAlgorithm) : HashAlgorithm = {
+    hashAlgorithm match {
+      case algo : XXHashAlogrithm => {
+        if(asciiOnlyKeys) {
+          new AsciiXXHashAlogrithm()
+        } else {
+          algo
+        }
+      }
+      case algo : HashAlgorithm  => algo
+    }
   }
 
   private def keyValidationRequired(keyHashType : KeyHashType ) : Boolean = {
@@ -148,17 +163,47 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     .build()
 
   private val keyHashingFunction : KeyHashing = keyHashType match {
-    case MD5KeyHash | MD5UpperKeyHash => new MD5DigestKeyHashing()
-    case SHA256KeyHash | SHA256UpperKeyHash => new SHA256DigestKeyHashing()
-    case MD5LowerKeyHash => new MD5DigestKeyHashing(upperCase = false)
-    case SHA256LowerKeyHash => new SHA256DigestKeyHashing(upperCase = false)
+    case MD5KeyHash | MD5UpperKeyHash => createMd5KeyHasher(asciiOnlyKeys,true)
+    case SHA256KeyHash | SHA256UpperKeyHash => createShaKeyHasher(asciiOnlyKeys,true)
+    case MD5LowerKeyHash => createMd5KeyHasher(asciiOnlyKeys,false)
+    case SHA256LowerKeyHash => createShaKeyHasher(asciiOnlyKeys,false)
     case NoKeyHash => NoKeyHashing.INSTANCE
-    case XXJavaHash => XXKeyHashing.JAVA_INSTANCE
-    case XXNativeJavaHash => XXKeyHashing.JNI_INSTANCE
+    case XXJavaHash => createXXKeyHasher(asciiOnlyKeys,false)
+    case XXNativeJavaHash => createXXKeyHasher(asciiOnlyKeys,true)
     case JenkinsHash => JenkinsKeyHashing
     case _ => NoKeyHashing.INSTANCE
+  }
 
+  private def createXXKeyHasher(asciiOnlyKeys : Boolean, native : Boolean) : KeyHashing = {
+    if(asciiOnlyKeys) {
+      if(native) {
+        AsciiXXKeyHashing.JNI_INSTANCE
+      } else {
+        AsciiXXKeyHashing.JAVA_INSTANCE
+      }
+    } else {
+      if(native) {
+        XXKeyHashing.JNI_INSTANCE
+      } else {
+        XXKeyHashing.JAVA_INSTANCE
+      }
+    }
+  }
 
+  private def createShaKeyHasher(asciiOnlyKeys : Boolean, uppercase : Boolean) : KeyHashing = {
+    if (asciiOnlyKeys) {
+      new AsciiSHA256DigestKeyHashing(upperCase = false)
+    } else {
+      new SHA256DigestKeyHashing(upperCase = false)
+    }
+  }
+
+  private def createMd5KeyHasher(asciiOnlyKeys : Boolean, uppercase : Boolean) : KeyHashing = {
+    if (asciiOnlyKeys) {
+      new AsciiMD5DigestKeyHashing(upperCase = uppercase)
+    } else {
+      new MD5DigestKeyHashing(upperCase = uppercase)
+    }
   }
 
   private def getHashedKey(key : String) : String = {

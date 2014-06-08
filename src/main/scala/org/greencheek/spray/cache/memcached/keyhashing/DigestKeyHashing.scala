@@ -2,6 +2,7 @@ package org.greencheek.spray.cache.memcached.keyhashing
 
 import java.security.MessageDigest
 import java.util.concurrent.ArrayBlockingQueue
+import java.io.UnsupportedEncodingException
 
 object DigestKeyHashing {
   val MD5: String = "MD5"
@@ -60,13 +61,27 @@ class DigestKeyHashing(val algorithm : String, val numberOfDigests : Int = -1,
     result
   }
 
+  def getBytes(key : String) : Array[Byte] = {
+    var bytes: Array[Byte] = null
+    try {
+      bytes = key.getBytes("UTF-8")
+    }
+    catch {
+      case e: UnsupportedEncodingException => {
+        bytes = key.getBytes
+      }
+    }
+    bytes
+  }
+
+
   override def hashKey(key: String): String = {
     upperCase match {
       case true => {
-        DigestKeyHashing.bytesToUpperCaseHex(digest(key.getBytes("UTF-8")))
+        DigestKeyHashing.bytesToUpperCaseHex(digest(getBytes(key)))
       }
       case false => {
-        DigestKeyHashing.bytesToLowerCaseHex(digest(key.getBytes("UTF-8")))
+        DigestKeyHashing.bytesToLowerCaseHex(digest(getBytes(key)))
       }
     }
   }
