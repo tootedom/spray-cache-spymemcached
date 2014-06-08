@@ -16,7 +16,7 @@ public class XXJavaHashLargeTextBenchmarkCacheWithFST {
 
     @Setup
     public void setUp() {
-        cache = CacheFactory.createLargeXXJavaTextCache();
+        cache = CacheFactory.createLargeXXJavaTextCacheWithFST();
     }
 
     @TearDown

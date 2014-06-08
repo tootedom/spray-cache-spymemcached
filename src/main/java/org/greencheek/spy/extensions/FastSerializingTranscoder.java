@@ -3,8 +3,6 @@ package org.greencheek.spy.extensions;
 import de.ruedigermoeller.serialization.FSTConfiguration;
 import de.ruedigermoeller.serialization.FSTObjectInput;
 import de.ruedigermoeller.serialization.FSTObjectOutput;
-import net.spy.memcached.compat.CloseUtil;
-import org.greencheek.util.ResizableByteBufferNoBoundsCheckingBackedOutputStream;
 
 
 import java.io.IOException;
@@ -34,7 +32,6 @@ public class FastSerializingTranscoder extends SerializingTranscoder {
         } catch (ClassNotFoundException e) {
             getLogger().warn("Caught CNFE decoding %d bytes of data",
                     in == null ? 0 : in.length, e);
-        } finally {
         }
         return rv;
     }
@@ -47,18 +44,13 @@ public class FastSerializingTranscoder extends SerializingTranscoder {
             throw new NullPointerException("Can't serialize null");
         }
         byte[] rv = null;
-        ResizableByteBufferNoBoundsCheckingBackedOutputStream bos = null;
         try {
-            bos = new ResizableByteBufferNoBoundsCheckingBackedOutputStream(4096);
-            FSTObjectOutput os = conf.getObjectOutput(bos);
+            FSTObjectOutput os = conf.getObjectOutput();
             os.writeObject(o);
             os.flush();
-            bos.close();
-            rv = bos.toByteArray();
+            rv = os.getCopyOfWrittenBuffer();
         } catch (IOException e) {
             throw new IllegalArgumentException("Non-serializable object", e);
-        } finally {
-            CloseUtil.close(bos);
         }
         return rv;
     }
