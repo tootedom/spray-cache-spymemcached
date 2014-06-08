@@ -91,9 +91,29 @@ class KeyHashMemcachedCacheSpec extends MemcachedBasedSpec {
       cache.get("1 space 1").get.await === "A"
 
     }
+    "ascii java xxhash can have a key with a space in it" in memcachedContext {
+      val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
+        waitForMemcachedSet = true, allowFlush = false, keyHashType = XXJavaHash, asciiOnlyKeys = true)
+
+      cache("1 space 1")("A").await === "A"
+      cache("2 space 2")("B").await === "B"
+
+      cache.get("1 space 1").get.await === "A"
+
+    }
     "native xxhash can have a key with a space in it" in memcachedContext {
       val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
         waitForMemcachedSet = true, allowFlush = false, keyHashType = XXNativeJavaHash)
+
+      cache("1 space 1")("A").await === "A"
+      cache("2 space 2")("B").await === "B"
+
+      cache.get("1 space 1").get.await === "A"
+
+    }
+    "ascii native xxhash can have a key with a space in it" in memcachedContext {
+      val cache = new MemcachedCache[String](Duration.Zero, 1000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
+        waitForMemcachedSet = true, allowFlush = false, keyHashType = XXNativeJavaHash, asciiOnlyKeys = true)
 
       cache("1 space 1")("A").await === "A"
       cache("2 space 2")("B").await === "B"
