@@ -364,6 +364,9 @@ The Jenkins hash is taken from xmemcached (https://github.com/killme2008/xmemcac
 
 ----
 
+
+
+
 ### Cache Key Prefix ###
 
 You may have several in memory caches in your application that you wish to migrate to a using a shared distributed cache. 
@@ -484,20 +487,6 @@ waiting for a maximum of 1 second.
     new MemcachedCache[String](waitForMemcachedSet = true,
                                setWaitDuration = Duration(1,TimeUnit.SECONDS))
                                                           
-
-----
-
-### Consistent Hashing ###
-
-By default the library uses ketama consistent hashing to distribute (shard) the puts across the memcached hosts.
-(http://www.last.fm/user/RJ/journal/2007/04/10/rz_libketama_-_a_consistent_hashing_algo_for_memcache_clients).
-The spy memcached library provides a number of hashing algorithms
-(https://github.com/couchbase/spymemcached/blob/master/src/main/java/net/spy/memcached/DefaultHashAlgorithm.java).
-However, if you have no reason to use a different hashing algorithm; you are best of sticking with the default of ketama.
-
-    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
-                                                          protocol = Protocol.TEXT, keyHashType = SHA256KeyHash,
-                                                          hashAlgorithm = DefaultHashAlgorithm.KETAMA_HASH
 
 ----
 
