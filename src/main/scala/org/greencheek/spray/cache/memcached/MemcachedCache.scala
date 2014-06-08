@@ -10,7 +10,7 @@ import org.slf4j.{LoggerFactory, Logger}
 import java.util.concurrent.{TimeoutException, TimeUnit}
 import net.spy.memcached.ConnectionFactoryBuilder.{Protocol, Locator}
 import net.spy.memcached.transcoders.Transcoder
-import org.greencheek.spy.extensions.SerializingTranscoder
+import org.greencheek.spy.extensions.{FastSerializingTranscoder, SerializingTranscoder}
 import org.greencheek.dns.lookup.{TCPAddressChecker, AddressChecker, LookupService}
 import scala.collection.JavaConversions._
 import org.greencheek.spray.cache.memcached.keyhashing._
@@ -43,7 +43,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val hashingType : Locator = Locator.CONSISTENT,
                                    val failureMode : FailureMode = FailureMode.Redistribute,
                                    val hashAlgorithm : HashAlgorithm = DefaultHashAlgorithm.KETAMA_HASH,
-                                   val serializingTranscoder : Transcoder[Object] = new SerializingTranscoder(),
+                                   val serializingTranscoder : Transcoder[Object] = new FastSerializingTranscoder(),
                                    val protocol : ConnectionFactoryBuilder.Protocol = Protocol.BINARY,
                                    val readBufferSize : Int = DefaultConnectionFactory.DEFAULT_READ_BUFFER_SIZE,
                                    val memcachedGetTimeout : Duration = Duration(2500,TimeUnit.MILLISECONDS),
