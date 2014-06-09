@@ -616,7 +616,7 @@ being that the items within memcached may be cached for longer that your current
 
 ----
 
-### Serialization Used ###
+### Serialization Mechanism ###
 
 Since `0.1.17` the default serialization mechanism used by the MemcachedCache is that provided by teh `fast-serialization`
 library (https://github.com/RuedigerMoeller/fast-serialization).
