@@ -10,6 +10,8 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 import org.greencheek.util.memcached.WithMemcached
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
+import org.greencheek.spray.cache.memcached.keyhashing.{NoKeyHash, KeyHashType}
+import net.spy.memcached.HashAlgorithm
 
 abstract class MemcachedCacheSpec extends Specification {
   implicit val system = ActorSystem()
@@ -203,11 +205,12 @@ abstract class MemcachedCacheSpec extends Specification {
   def memcachedCache[T](hosts: String, maxCapacity: Int = 500, initialCapacity: Int = 16,
                         timeToLive: Duration = Duration.Zero, timeToIdle: Duration = Duration.Zero,
                         binary : Boolean = true, waitForMemcachedSet : Boolean = false,
-                        allowFlush : Boolean = true, waitForMemcachedRemove : Boolean = false, keyPrefix : Option[String]= None) = {
+                        allowFlush : Boolean = true, waitForMemcachedRemove : Boolean = false, keyPrefix : Option[String]= None,
+                        keyHashType : KeyHashType = NoKeyHash, hashAlgo : HashAlgorithm = MemcachedCache.DEFAULT_ALGORITHM ) = {
     binary match {
       case true => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.BINARY,
         waitForMemcachedSet = waitForMemcachedSet, allowFlush = allowFlush, waitForMemcachedRemove = waitForMemcachedRemove,
-        removeWaitDuration = Duration(4,TimeUnit.SECONDS), keyPrefix = keyPrefix)
+        removeWaitDuration = Duration(4,TimeUnit.SECONDS), keyPrefix = keyPrefix, keyHashType = keyHashType, hashAlgorithm = hashAlgo)
       case false => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.TEXT,
         waitForMemcachedSet = waitForMemcachedSet,allowFlush = allowFlush, waitForMemcachedRemove = waitForMemcachedRemove,
         removeWaitDuration = Duration(4,TimeUnit.SECONDS), keyPrefix = keyPrefix)

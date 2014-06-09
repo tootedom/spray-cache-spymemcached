@@ -46,7 +46,7 @@ object MemcachedDaemonFactory {
   def stopMemcachedDaemon(memcachedDaemon: MemcachedDaemonWrapper): Unit = {
     if (memcachedDaemon.daemon != None) {
       if (memcachedDaemon.daemon.get.isRunning()) {
-        System.out.println("Shutting down the Memcached Daemon");
+        System.out.println("Shutting down the Memcached Daemon on port: " + memcachedDaemon.port);
         memcachedDaemon.daemon.get.stop();
 
         try {

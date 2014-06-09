@@ -317,7 +317,6 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   }
 
   def apply(itemExpiry : Duration, key : Any, genValue: () => Future[Serializable])(implicit ec: ExecutionContext): Future[Serializable] = {
-    // check local whilst computation is occurring cache.
     val keyString = getHashedKey(key.toString)
     logger.info("put requested for {}", keyString)
     if(!isEnabled) {
@@ -325,6 +324,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       genValue()
     }
     else {
+      // check local whilst computation is occurring cache.
       val existingFuture : Future[Serializable] = store.get(keyString)
       if(existingFuture==null) {
         // check memcached.
@@ -371,7 +371,13 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
           }
         } finally {
           store.remove(key, promise.future)
-          promise.complete(value)
+          try {
+            promise.complete(value)
+          } catch {
+            case e: IllegalStateException => {
+              logger.error("future already completed for key {}",key)
+            }
+          }
         }
     }(ec)
     promise.future
