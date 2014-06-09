@@ -13,6 +13,7 @@
         - [Using the Binary or Text Protocol](#using-the-binary-or-text-protocol)
         - [Cache Key](#cache-key)
         - [Cache Key Prefix](#cache-key-prefix)
+        - [ASCII Keys](#ascii-keys)
         - [Specifying GET Timeout](#specifying-get-timeout)
         - [Specifying SET Timeout](#specifying-set-timeout)
         - [Consistent Hashing](#consistent-hashing)
@@ -50,7 +51,7 @@ The library is availble in maven central, and the dependency is as follows:
     <dependency>
       <groupId>org.greencheek.spray</groupId>
       <artifactId>spray-cache-spymemcached</artifactId>
-      <version>0.1.14</version>
+      <version>0.1.17</version>
     </dependency>
 
 The library was build using scala 2.10.x.  It has not be tested with scala 2.9.x.  Therefore, consider it only compatible
@@ -70,6 +71,8 @@ It is compiled against the latest version of spray.  The libraries depedencies a
     [INFO] +- org.slf4j:slf4j-api:jar:1.7.6:compile
     [INFO] +- net.jpountz.lz4:lz4:jar:1.2.0:compile
     [INFO] +- org.iq80.snappy:snappy:jar:0.3:compile
+    [INFO] +- de.ruedigermoeller:fst:jar:1.58:compile
+    [INFO] |  \- org.javassist:javassist:jar:3.18.1-GA:compile
 
 The akka library is a requirement for spray, and therefore is a `provided` dependency:
 
@@ -213,6 +216,37 @@ the default `11211` is used
 
     val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211")
 
+
+----
+
+### Host Resolution ###
+
+The underlying memcached library uses IP address, therefore the passed in host names are resolved to IP address at construction
+time.  The default timeout for IP address resolution, per host, is 3 seconds.  This can be changed:
+
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                          dnsConnectionTimeout = Duration(5,TimeUnit.SECONDS))
+                                                          
+                                                          
+----
+
+### Host Connection Check ###
+
+When a host is resolved to an IP address, that does not guarantee that, that host is contactable.  You are able to perform
+an additional connection check at construction time to determine that you are able to connect to that host.  If you unable, then
+that particular host shall be removed from the list of connactable hosts the memcached client will distribute requests across.
+To perform a connection test against the resolved host, and port; at construction time use the `doHostConnectionAttempt = true`
+constructor parameter.  This too has a timeout (default 1 second), that can be specified via the `hostConnectionAttemptTimeout = Duration(2,TimeUnit.SECONDS)`:
+ 
+ 
+    val cache: Cache[Double] = new MemcachedCache[Double](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                          dnsConnectionTimeout = Duration(5,TimeUnit.SECONDS),
+                                                          doHostConnectionAttempt = true,
+                                                          hostConnectionAttemptTimeout = Duration(2,TimeUnit.SECONDS))
+                                                          
+Normally you do not want to perform this check, as the memcached server might only be temporarily down (maintenance, or other reason).
+By default the check is not performed, so that the memcached library will still consider that host eligible for use.  When it is available
+again, it will reconnect to it.                                                          
 
 ----
 
@@ -364,8 +398,20 @@ The Jenkins hash is taken from xmemcached (https://github.com/killme2008/xmemcac
 
 ----
 
+### ASCII Keys ###
+
+Available as of `0.1.17`
+
+If you know your key is made up of ASCII characters (the `toString`) method of your class returns an ASCII only string,
+you can add the parameter `asciiOnlyKeys = true` to the Cache constructor.  This will improve performance slightly, as the
+conversion of a string to a byte[] is quicker for ASCII strings than it is for UTF-8.
 
 
+    val cache: Cache[MyCaseClass] = new MemcachedCache[MyCaseClass](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                                    protocol = Protocol.TEXT, keyHashType = XXJavaHash,
+                                                                    asciiOnlyKeys = true)
+                                                                    
+----                                                                    
 
 ### Cache Key Prefix ###
 
@@ -564,3 +610,28 @@ being that the items within memcached may be cached for longer that your current
       }
     }
 ````    
+
+----
+
+### Serialization Used ###
+
+Since `0.1.17` the default serialization mechanism used by the MemcachedCache is that provided by teh `fast-serialization`
+library (https://github.com/RuedigerMoeller/fast-serialization).
+
+Prior to this a standard `ObjectOutputStream/ObjectInputStream` was used (i.e. standard java serialization).  The Fast library
+is significantly more performant than that of the standard JDK serialization.  However, if you find issues with serialization,
+you can choose to use the JDK serialization:
+
+To use the Default JDK Serialization use the `serializingTranscoder` constructor parameter, as follows:
+
+    val cache: Cache[ProductCase] = new MemcachedCache[ProductCase](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                          protocol = Protocol.TEXT, keyHashType = XXJavaHash,
+                                                          memcachedGetTimeout = Duration(1,TimeUnit.SECONDS),
+                                                          serializingTranscoder = new SerializingTranscoder())
+                                                          
+The Fast Serialization, which is the default, can be explicitly set as follows:                                                          
+
+    val cache: Cache[ProductCase] = new MemcachedCache[ProductCase](memcachedHosts = "host1:11211,host2:11211,host3:11211",
+                                                          protocol = Protocol.TEXT, keyHashType = XXJavaHash,
+                                                          memcachedGetTimeout = Duration(1,TimeUnit.SECONDS),
+                                                          serializingTranscoder = new FastSerializingTranscoder())
