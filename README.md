@@ -7,6 +7,8 @@
     - [Example Uses](#example-uses)
         - [Max Capacity](#max-capacity)
         - [Specifying the Memcached hosts](#specifying-the-memcached-hosts)
+        - [Host Resolution](#host-resolution)
+        - [Host Connection Check](#host-connection-check)
         - [Specifying the Expiry of Items in memcached](#specifying-the-expiry-of-items-in-memcached)
         - [Specifying the Expiry of a single Item](#specifying-the-expiry-of-a-single-item)
         - [No Expiry](#no-expiry)
@@ -17,7 +19,8 @@
         - [Specifying GET Timeout](#specifying-get-timeout)
         - [Specifying SET Timeout](#specifying-set-timeout)
         - [Consistent Hashing](#consistent-hashing)
-        - [Caching Serializable Objects](#caching-serializable-objects)        
+        - [Caching Serializable Objects](#caching-serializable-objects) 
+        - [Serialization Mechanism](#serialization-mechanism)
 
 ----
 
