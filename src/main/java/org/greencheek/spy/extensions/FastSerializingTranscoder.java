@@ -14,7 +14,24 @@ public class FastSerializingTranscoder extends SerializingTranscoder {
 
     // ! reuse this Object, it caches metadata. Performance degrades massively
     // if you create a new Configuration Object with each serialization !
-    static FSTConfiguration conf = FSTConfiguration.createDefaultConfiguration();
+    final FSTConfiguration conf;
+
+    public FastSerializingTranscoder() {
+        this(false,null);
+    }
+
+    public FastSerializingTranscoder(Class[] classesKnownToBeSerialized) {
+        this(false,classesKnownToBeSerialized);
+    }
+
+    public FastSerializingTranscoder(boolean shareReferences, Class[] classesKnownToBeSerialized) {
+        conf = FSTConfiguration.createDefaultConfiguration();
+        conf.setShareReferences(shareReferences);
+        if (classesKnownToBeSerialized != null && classesKnownToBeSerialized.length > 0) {
+            conf.registerClass(classesKnownToBeSerialized);
+        }
+    }
+
     /**
      * Get the object represented by the given serialized bytes.
      */

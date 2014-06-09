@@ -225,17 +225,15 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   private def getFromDistributedCache(key: String): Option[Future[Serializable]] = {
     try {
         val future =  memcached.asyncGet(key)
-        future.get(memcachedGetTimeout.toMillis,TimeUnit.MILLISECONDS) match {
-          case null => {
+        val cacheVal = future.get(memcachedGetTimeout.toMillis,TimeUnit.MILLISECONDS)
+        if(cacheVal==null){
             logCacheMiss(key)
             logger.debug("key {} not found in memcached", key)
             None
-          }
-          case o: Object => {
+        } else {
             logCacheHit(key)
             logger.debug("key {} found in memcached", key)
-            Some(Promise.successful(o.asInstanceOf[Serializable]).future)
-          }
+            Some(Promise.successful(cacheVal.asInstanceOf[Serializable]).future)
         }
     } catch {
       case e : OperationTimeoutException => {
@@ -292,14 +290,13 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       logCacheMiss(keyString)
       None
     } else {
-      store.get(keyString) match {
-        case null => {
+      val future : Future[Serializable] = store.get(keyString)
+      if(future==null) {
           getFromDistributedCache(keyString)
-        }
-        case existing => {
+      }
+      else {
           logCacheHit(keyString)
-          Some(existing)
-        }
+          Some(future)
       }
     }
   }
@@ -328,15 +325,15 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       genValue()
     }
     else {
-      store.get(keyString) match {
-        case null => {
+      val existingFuture : Future[Serializable] = store.get(keyString)
+      if(existingFuture==null) {
           // check memcached.
           getFromDistributedCache(keyString) match {
             case None => {
               val promise = Promise[Serializable]()
               store.putIfAbsent(keyString, promise.future) match {
                 case null => {
-                  cacheWriteFunction(genValue(),promise,keyString,itemExpiry,ec)
+                  cacheWriteFunction(genValue(), promise, keyString, itemExpiry, ec)
                 }
                 case existingFuture => {
                   existingFuture
@@ -347,11 +344,10 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
               future
             }
           }
-        }
-        case existingFuture => {
+      }
+      else  {
           logCacheHit(keyString)
           existingFuture
-        }
       }
     }
   }

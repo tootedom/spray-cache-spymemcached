@@ -19,7 +19,7 @@ class AsciiMemcachedCacheSpec extends MemcachedCacheSpec{
   override def getMemcacheContext(): WithMemcached = WithMemcached(false)
 
   "be thread-safe" in memcachedContext {
-    val cache = memcachedCache[Int]("localhost:"+memcachedContext.memcached.port, maxCapacity = 1000,binary = memcachedContext.binary,
+    val cache = memcachedCache[Int]("127.0.0.1:"+memcachedContext.memcached.port, maxCapacity = 1000,binary = memcachedContext.binary,
       waitForMemcachedSet = true)
 
     // exercise the cache from 10 parallel "tracks" (threads)

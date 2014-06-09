@@ -31,7 +31,6 @@ object MemcachedDaemonFactory {
       daemon.setBinary(binary)
       daemon.setVerbose(true)
       daemon.start()
-      Thread.sleep(500)
 
 
 

@@ -49,6 +49,16 @@ object CacheFactory {
     )
   }
 
+  def createLargeXXJavaTextCacheWithFSTKnownClasses : MemcachedCache[LargeCacheObject] = {
+    new MemcachedCache[LargeCacheObject](
+      memcachedHosts = System.getProperty("memcached.hosts","localhost:11211"),
+      maxCapacity = 10,
+      keyHashType = XXJavaHash,
+      protocol =  Protocol.TEXT,
+      serializingTranscoder =  new FastSerializingTranscoder(false,Array(classOf[LargeCacheObject]))
+    )
+  }
+
   def createAsciiOnlySmallXXJavaTextXXHashCache : MemcachedCache[SmallCacheObject] = {
     new MemcachedCache[SmallCacheObject](
       memcachedHosts = System.getProperty("memcached.hosts","localhost:11211"),

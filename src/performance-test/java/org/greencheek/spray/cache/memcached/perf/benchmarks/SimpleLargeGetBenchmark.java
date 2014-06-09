@@ -1,9 +1,6 @@
 package org.greencheek.spray.cache.memcached.perf.benchmarks;
 
-import org.greencheek.spray.cache.memcached.perf.state.LargeCacheKey;
-import org.greencheek.spray.cache.memcached.perf.state.LargeCacheObject;
-import org.greencheek.spray.cache.memcached.perf.state.XXJavaHashLargeTextBenchmarkCache;
-import org.greencheek.spray.cache.memcached.perf.state.XXJavaHashLargeTextBenchmarkCacheWithFST;
+import org.greencheek.spray.cache.memcached.perf.state.*;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.GenerateMicroBenchmark;
 import org.openjdk.jmh.annotations.Mode;
@@ -32,6 +29,13 @@ public class SimpleLargeGetBenchmark {
     public LargeCacheObject simpleGetWithFST(LargeCacheKey key, LargeCacheObject value,XXJavaHashLargeTextBenchmarkCacheWithFST cache) {
         return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.testLargeGetWithFST(key, value, cache);
     }
+
+    @GenerateMicroBenchmark
+    @BenchmarkMode({Mode.SampleTime})
+    public LargeCacheObject simpleGetWithFSTKnownClasses(LargeCacheKey key, LargeCacheObject value,XXJavaHashLargeTextBenchmarkCacheWithFSTKnownClasses cache) {
+        return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.testLargeGetWithFSTKnownClasses(key, value, cache);
+    }
+
 
 
     public static void main(String[] args) throws RunnerException {

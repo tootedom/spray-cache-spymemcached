@@ -30,7 +30,7 @@ class NoMemcachedHostsSpec extends MemcachedBasedSpec {
     "is non invasive when no host are available" in memcachedContext {
 
       val randomPort = portUtil.getPort(portUtil.findFreePort)
-      val hosts = "localhost:" + randomPort + ",localhost:" + randomPort
+      val hosts = "127.0.0.1:" + randomPort + ",127.0.0.1:" + randomPort
 
       val cache = new MemcachedCache[String](memcachedHosts = hosts, protocol = Protocol.TEXT,
         doHostConnectionAttempt = true, throwExceptionOnNoHosts = false)
