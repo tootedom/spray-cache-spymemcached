@@ -327,23 +327,17 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     else {
       val existingFuture : Future[Serializable] = store.get(keyString)
       if(existingFuture==null) {
-          // check memcached.
-          getFromDistributedCache(keyString) match {
-            case None => {
-              val promise = Promise[Serializable]()
-              store.putIfAbsent(keyString, promise.future) match {
-                case null => {
-                  cacheWriteFunction(genValue(), promise, keyString, itemExpiry, ec)
-                }
-                case existingFuture => {
-                  existingFuture
-                }
-              }
-            }
-            case Some(future) => {
-              future
-            }
+        // check memcached.
+        getFromDistributedCache(keyString).getOrElse {
+          // create and store a new future for the to be generated value
+          val promise = Promise[Serializable]()
+          val alreadyStoredFuture : Future[Serializable] = store.putIfAbsent(keyString, promise.future)
+          if(alreadyStoredFuture == null) {
+            cacheWriteFunction(genValue(), promise, keyString, itemExpiry, ec)
+          } else {
+            alreadyStoredFuture
           }
+        }
       }
       else  {
           logCacheHit(keyString)

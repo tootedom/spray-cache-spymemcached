@@ -11,17 +11,17 @@ import java.io.IOException;
  * Uses https://github.com/RuedigerMoeller/fast-serialization for serialization
  */
 public class FastSerializingTranscoder extends SerializingTranscoder {
-
+    public static final boolean DEFAULT_SHARE_REFERENCES = true;
     // ! reuse this Object, it caches metadata. Performance degrades massively
     // if you create a new Configuration Object with each serialization !
     final FSTConfiguration conf;
 
     public FastSerializingTranscoder() {
-        this(false,null);
+        this(DEFAULT_SHARE_REFERENCES,null);
     }
 
     public FastSerializingTranscoder(Class[] classesKnownToBeSerialized) {
-        this(false,classesKnownToBeSerialized);
+        this(DEFAULT_SHARE_REFERENCES,classesKnownToBeSerialized);
     }
 
     public FastSerializingTranscoder(boolean shareReferences, Class[] classesKnownToBeSerialized) {
