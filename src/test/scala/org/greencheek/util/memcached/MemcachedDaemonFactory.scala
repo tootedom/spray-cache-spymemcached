@@ -7,15 +7,22 @@ import com.thimbleware.jmemcached.storage.CacheStorage
 import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap
 import scala.Some
 import java.net.InetSocketAddress
+import java.util.concurrent.Semaphore
 
 
 object MemcachedDaemonFactory {
   private val logger : Logger = LoggerFactory.getLogger("MemcachedDaemonFactory")
   private val portUtil = new PortUtil()
+  private val portSemaphore : Semaphore = new Semaphore(1)
   def createMemcachedDaemon(binary : Boolean = true) : MemcachedDaemonWrapper = {
-    val portServerSocket = portUtil.findFreePort
-    val memcachedDport = portUtil.getPort(portServerSocket)
-    startMemcachedDaemon(memcachedDport,binary)
+    portSemaphore.acquire()
+    try {
+      val portServerSocket = portUtil.findFreePort
+      val memcachedDport = portUtil.getPort(portServerSocket)
+      startMemcachedDaemon(memcachedDport, binary)
+    } finally {
+      portSemaphore.release()
+    }
   }
 
   private[memcached] def startMemcachedDaemon(port: Int, binary : Boolean = true): MemcachedDaemonWrapper = {

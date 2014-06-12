@@ -174,6 +174,9 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     case _ => NoKeyHashing.INSTANCE
   }
 
+  private val setWaitDurationInMillis = setWaitDuration.toMillis
+  private val memcachedGetTimeoutMillis = memcachedGetTimeout.toMillis
+
   private def createXXKeyHasher(asciiOnlyKeys : Boolean, native : Boolean) : KeyHashing = {
     if(asciiOnlyKeys) {
       if(native) {
@@ -225,7 +228,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   private def getFromDistributedCache(key: String): Option[Future[Serializable]] = {
     try {
         val future =  memcached.asyncGet(key)
-        val cacheVal = future.get(memcachedGetTimeout.toMillis,TimeUnit.MILLISECONDS)
+        val cacheVal = future.get(memcachedGetTimeoutMillis,TimeUnit.MILLISECONDS)
         if(cacheVal==null){
             logCacheMiss(key)
             logger.debug("key {} not found in memcached", key)
@@ -233,7 +236,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         } else {
             logCacheHit(key)
             logger.debug("key {} found in memcached", key)
-            Some(Promise.successful(cacheVal.asInstanceOf[Serializable]).future)
+            Some(Future.successful(cacheVal.asInstanceOf[Serializable]))
         }
     } catch {
       case e : OperationTimeoutException => {
@@ -251,23 +254,31 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     }
   }
 
-  private def getDuration(timeToLive : Duration) : Duration = {
-    timeToLive match {
-      case Duration.Inf => Duration.Zero
-      case Duration.MinusInf => Duration.Zero
-      case Duration.Zero => Duration.Zero
-      case x if x.lt(MemcachedCache.ONE_SECOND) => Duration.Zero
-      case _  => timeToLive
+  private def getDuration(timeToLive : Duration) : Long = {
+    if(timeToLive == Duration.Inf) {
+      0
     }
+    else if(timeToLive == null) {
+      0
+    } else {
+      val timeToLiveSec : Long = timeToLive.toSeconds
+      if(timeToLiveSec >= 1l) {
+        timeToLiveSec
+      } else {
+        0
+      }
+    }
+
+
   }
 
   private def writeToDistributedCache(key: String, value : Serializable, timeToLive : Duration) : Unit = {
-    val entryTTL : Duration = getDuration(timeToLive)
+    val entryTTL : Long = getDuration(timeToLive)
 
     if( waitForMemcachedSet ) {
-      val futureSet = memcached.set(key, entryTTL.toSeconds.toInt, value)
+      val futureSet = memcached.set(key, entryTTL.toInt, value)
       try {
-        futureSet.get(setWaitDuration.toMillis, TimeUnit.MILLISECONDS)
+        futureSet.get(setWaitDurationInMillis, TimeUnit.MILLISECONDS)
       } catch {
         case e: Exception => {
           logger.warn("Exception waiting for memcached set to occur",e)
@@ -275,7 +286,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       }
     } else {
       try {
-        memcached.set(key, entryTTL.toSeconds.toInt, value)
+        memcached.set(key, entryTTL.toInt, value)
       } catch {
         case e: Exception => {
           logger.warn("Exception waiting for memcached set to occur")

@@ -15,6 +15,7 @@ import ExecutionContext.Implicits.global
 import org.greencheek.util.memcached.WithMemcached
 import net.spy.memcached.FailureMode
 import org.junit.Assume
+import java.util.concurrent.TimeUnit
 
 /**
  * Created by dominictootell on 07/04/2014.
@@ -29,7 +30,7 @@ class KeyHashMemcachedCacheSpec extends MemcachedBasedSpec {
   "A Memcached cache" >> {
     "be thread-safe sha256 hash key" in memcachedContext {
       val cache = new MemcachedCache[Int](Duration.Zero, 10000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
-        waitForMemcachedSet = true, allowFlush = false, keyHashType = SHA256KeyHash)
+        waitForMemcachedSet = true, allowFlush = false, keyHashType = SHA256KeyHash, memcachedGetTimeout = Duration(1,TimeUnit.SECONDS))
 
       // exercise the cache from 10 parallel "tracks" (threads)
       val views = Future.traverse(Seq.tabulate(10)(identityFunc)) {

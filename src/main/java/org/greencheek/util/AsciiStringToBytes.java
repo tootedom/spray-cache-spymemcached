@@ -12,9 +12,11 @@ public class AsciiStringToBytes {
      */
     public static byte[] getBytes( final String str )
     {
-        final byte[] res = new byte[ str.length() ];
-        for (int i = 0; i < str.length(); i++)
-            res[ i ] = (byte) str.charAt( i );
+        int len = str.length();
+        final byte[] res = new byte[len];
+        for (int i = 0; i < len; i++) {
+            res[i] = (byte) str.charAt(i);
+        }
         return res;
     }
 }
