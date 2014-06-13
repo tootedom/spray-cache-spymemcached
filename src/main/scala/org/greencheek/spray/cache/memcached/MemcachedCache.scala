@@ -231,11 +231,9 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         val cacheVal = future.get(memcachedGetTimeoutMillis,TimeUnit.MILLISECONDS)
         if(cacheVal==null){
             logCacheMiss(key)
-            logger.debug("key {} not found in memcached", key)
             None
         } else {
             logCacheHit(key)
-            logger.debug("key {} found in memcached", key)
             Some(Future.successful(cacheVal.asInstanceOf[Serializable]))
         }
     } catch {
@@ -314,22 +312,25 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
 
   override def apply(key: Any,genValue: () => Future[Serializable])(implicit ec: ExecutionContext): Future[Serializable] = {
-    key match {
-      case x: (_, _) if x._1.isInstanceOf[Duration] => {
-        apply(x._1.asInstanceOf[Duration],x._2,genValue)
+    if(key.isInstanceOf[Tuple2[_,_]]) {
+      key match {
+        case x: (_, _) if x._1.isInstanceOf[Duration] => {
+          apply(x._1.asInstanceOf[Duration], x._2, genValue)
+        }
+        case x: (_, _) if x._2.isInstanceOf[Duration] => {
+          apply(x._2.asInstanceOf[Duration], x._1, genValue)
+        }
+        case _ => {
+          apply(timeToLive, key, genValue)
+        }
       }
-      case x : (_,_) if x._2.isInstanceOf[Duration] => {
-        apply(x._2.asInstanceOf[Duration],x._1,genValue)
-      }
-      case _ => {
-        apply(timeToLive,key,genValue)
-      }
+    } else {
+      apply(timeToLive, key, genValue)
     }
   }
 
   def apply(itemExpiry : Duration, key : Any, genValue: () => Future[Serializable])(implicit ec: ExecutionContext): Future[Serializable] = {
     val keyString = getHashedKey(key.toString)
-    logger.info("put requested for {}", keyString)
     if(!isEnabled) {
       logCacheMiss(keyString)
       genValue()
@@ -344,6 +345,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
           val promise = Promise[Serializable]()
           val alreadyStoredFuture : Future[Serializable] = store.putIfAbsent(keyString, promise.future)
           if(alreadyStoredFuture == null) {
+            logger.info("set requested for {}", keyString)
             cacheWriteFunction(genValue(), promise, keyString, itemExpiry, ec)
           } else {
             alreadyStoredFuture
@@ -381,13 +383,16 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
             logger.error("problem setting key {} in memcached",key)
           }
         } finally {
-          store.remove(key, promise.future)
+
           try {
             promise.complete(value)
           } catch {
             case e: IllegalStateException => {
               logger.error("future already completed for key {}",key)
             }
+          } finally {
+            // it is an LRU cache, so the value may have been thrown out.
+            store.remove(key, promise.future)
           }
         }
     }(ec)

@@ -14,6 +14,11 @@ object SimpleGetBenchmarks {
     return cache.cache.apply(key)(value).await
   }
 
+  def testSmallNativeGet(key :SmallCacheKey, value :SmallCacheObject, cache : XXNativeJavaHashSmallTextBenchmarkCache) : SmallCacheObject = {
+    return cache.cache.apply(key)(value).await
+  }
+
+
   def simpleHashAlgoGet(key :SmallCacheKey, value :SmallCacheObject, cache : XXJavaHashSmallTextHashAlgoBenchmarkCache) : SmallCacheObject = {
     return cache.cache.apply(key)(value).await
   }

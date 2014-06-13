@@ -36,6 +36,12 @@ public class SimpleSmallGetBenchmark {
         return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.simpleAsciiOnlyHashAlgoGet(key, value, cache);
     }
 
+    @GenerateMicroBenchmark
+    @BenchmarkMode({Mode.SampleTime})
+    public SmallCacheObject simpleNativeGet(SmallCacheKey key, SmallCacheObject value,XXNativeJavaHashSmallTextBenchmarkCache cache) {
+        return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.testSmallNativeGet(key, value, cache);
+    }
+
 
     public static void main(String[] args) throws RunnerException {
 

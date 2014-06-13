@@ -1,7 +1,7 @@
 package org.greencheek.spray.cache.memcached.perftests.cacheobjects
 
 import org.greencheek.spray.cache.memcached.MemcachedCache
-import org.greencheek.spray.cache.memcached.keyhashing.XXJavaHash
+import org.greencheek.spray.cache.memcached.keyhashing.{XXNativeJavaHash, XXJavaHash}
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
 import org.greencheek.spray.cache.memcached.perf.state.{LargeCacheObject, SmallCacheObject}
 import org.greencheek.spy.extensions.FastSerializingTranscoder
@@ -17,7 +17,15 @@ object CacheFactory {
         keyHashType = XXJavaHash,
         protocol =  Protocol.TEXT
       )
+  }
 
+  def createSmallXXNativeJavaTextCache : MemcachedCache[SmallCacheObject] = {
+    new MemcachedCache[SmallCacheObject](
+      memcachedHosts = System.getProperty("memcached.hosts","localhost:11211"),
+      maxCapacity = 10,
+      keyHashType = XXNativeJavaHash,
+      protocol =  Protocol.TEXT
+    )
   }
 
   def createSmallXXJavaTextXXHashCache : MemcachedCache[SmallCacheObject] = {
