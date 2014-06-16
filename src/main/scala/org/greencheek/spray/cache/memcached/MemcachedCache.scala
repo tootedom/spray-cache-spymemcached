@@ -345,7 +345,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
           val promise = Promise[Serializable]()
           val alreadyStoredFuture : Future[Serializable] = store.putIfAbsent(keyString, promise.future)
           if(alreadyStoredFuture == null) {
-            logger.info("set requested for {}", keyString)
+            logger.debug("set requested for {}", keyString)
             cacheWriteFunction(genValue(), promise, keyString, itemExpiry, ec)
           } else {
             alreadyStoredFuture

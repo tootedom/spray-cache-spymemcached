@@ -139,22 +139,6 @@ public abstract class BaseSerializingTranscoder extends SpyObject {
         return rv;
     }
 
-    private int getMaxCompressedLength(int bufferSize) {
-        try {
-            return Snappy.maxCompressedLength(bufferSize);
-        } catch (Exception e) {
-            return bufferSize;
-        }
-    }
-
-    private byte[] compress(byte[] uncompressed, int offset, int bufferSize, int maxCompressedLength) throws Exception {
-        byte[] buf = new byte[maxCompressedLength];
-        int compressedByteSize = Snappy.compress(uncompressed, offset, bufferSize, buf, 0);
-        byte[] compressed = new byte[compressedByteSize];
-        System.arraycopy(buf, 0, compressed, 0, compressedByteSize);
-        return compressed;
-    }
-
     /**
      * Compress the given array of bytes.
      */
@@ -165,12 +149,9 @@ public abstract class BaseSerializingTranscoder extends SpyObject {
 
         byte[] compressed;
         try {
-            int maxPossibleCompressedLength = getMaxCompressedLength(in.length);
-            compressed = compress(in, 0, in.length, maxPossibleCompressedLength);
+            compressed = Snappy.compress(in);
         } catch (Exception e) {
             throw new RuntimeException("IO exception compressing data", e);
-        } finally {
-
         }
         getLogger().debug("Compressed %d bytes to %d", in.length, compressed.length);
         return compressed;
