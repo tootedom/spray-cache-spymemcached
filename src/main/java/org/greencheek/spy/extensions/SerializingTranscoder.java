@@ -35,6 +35,7 @@ import java.util.Date;
 public class SerializingTranscoder extends BaseSerializingTranscoder implements
         Transcoder<Object> {
 
+  public static int MAX_CONTENT_SIZE_IN_BYTES = CachedData.MAX_SIZE;
   // General flags
   static final int SERIALIZED = 1;
   static final int COMPRESSED = 2;
@@ -56,14 +57,18 @@ public class SerializingTranscoder extends BaseSerializingTranscoder implements
    * Get a serializing transcoder with the default max data size.
    */
   public SerializingTranscoder() {
-    this(CachedData.MAX_SIZE);
+    this(MAX_CONTENT_SIZE_IN_BYTES);
   }
 
   /**
    * Get a serializing transcoder that specifies the max data size.
    */
   public SerializingTranscoder(int max) {
-    super(max);
+      this(max,DEFAULT_COMPRESSION_THRESHOLD);
+  }
+
+  public SerializingTranscoder(int maxContentLength,int compressionThresholdInBytes) {
+      super(maxContentLength,compressionThresholdInBytes);
   }
 
   @Override

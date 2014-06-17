@@ -45,7 +45,7 @@ public abstract class BaseSerializingTranscoder extends SpyObject {
 
     private static final String DEFAULT_CHARSET = "UTF-8";
 
-    protected int compressionThreshold = DEFAULT_COMPRESSION_THRESHOLD;
+    protected int compressionThreshold;
     protected String charset = DEFAULT_CHARSET;
 
     private final int maxSize;
@@ -54,8 +54,13 @@ public abstract class BaseSerializingTranscoder extends SpyObject {
      * Initialize a serializing transcoder with the given maximum data size.
      */
     public BaseSerializingTranscoder(int max) {
+        this(max,DEFAULT_COMPRESSION_THRESHOLD);
+    }
+
+    public BaseSerializingTranscoder(int maxContentLength, int compressionThreshold) {
         super();
-        maxSize = max;
+        this.maxSize = maxContentLength;
+        this.compressionThreshold = compressionThreshold;
     }
 
     public boolean asyncDecode(CachedData d) {

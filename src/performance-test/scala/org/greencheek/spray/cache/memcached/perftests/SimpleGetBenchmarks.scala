@@ -27,6 +27,13 @@ object SimpleGetBenchmarks {
     return cache.cache.apply(key)(value).await
   }
 
+  def testMediumGet(key :LargeCacheKey, value : MediumCacheObject, cache : XXJavaMediumTextBenchmarkCache) : MediumCacheObject = {
+    return cache.cache.apply(key)(value).await
+  }
+
+  def testMediumCompressedGet(key :LargeCacheKey, value : MediumCacheObject, cache : XXJavaMediumCompressedTextBenchmarkCache ) : MediumCacheObject = {
+    return cache.cache.apply(key)(value).await
+  }
 
   def testLargeGet(key :LargeCacheKey, value :LargeCacheObject, cache : XXJavaHashLargeTextBenchmarkCache) : LargeCacheObject = {
     return cache.cache.apply(key)(value).await

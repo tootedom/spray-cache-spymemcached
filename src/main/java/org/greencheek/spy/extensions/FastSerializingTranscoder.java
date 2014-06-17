@@ -20,11 +20,21 @@ public class FastSerializingTranscoder extends SerializingTranscoder {
         this(DEFAULT_SHARE_REFERENCES,null);
     }
 
+    public FastSerializingTranscoder(int maxContentLengthInBytes, int compressionThresholdInBytes) {
+        this(DEFAULT_SHARE_REFERENCES,null,maxContentLengthInBytes,compressionThresholdInBytes);
+    }
+
     public FastSerializingTranscoder(Class[] classesKnownToBeSerialized) {
         this(DEFAULT_SHARE_REFERENCES,classesKnownToBeSerialized);
     }
 
     public FastSerializingTranscoder(boolean shareReferences, Class[] classesKnownToBeSerialized) {
+        this(shareReferences,classesKnownToBeSerialized,MAX_CONTENT_SIZE_IN_BYTES,DEFAULT_COMPRESSION_THRESHOLD);
+    }
+
+    public FastSerializingTranscoder(boolean shareReferences, Class[] classesKnownToBeSerialized,
+                                     int maxContentLengthInBytes, int compressionThresholdInBytes) {
+        super(maxContentLengthInBytes,compressionThresholdInBytes);
         conf = FSTConfiguration.createDefaultConfiguration();
         conf.setShareReferences(shareReferences);
         if (classesKnownToBeSerialized != null && classesKnownToBeSerialized.length > 0) {

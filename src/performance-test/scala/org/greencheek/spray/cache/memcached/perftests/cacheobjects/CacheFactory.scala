@@ -3,8 +3,9 @@ package org.greencheek.spray.cache.memcached.perftests.cacheobjects
 import org.greencheek.spray.cache.memcached.MemcachedCache
 import org.greencheek.spray.cache.memcached.keyhashing.{XXNativeJavaHash, XXJavaHash}
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
-import org.greencheek.spray.cache.memcached.perf.state.{LargeCacheObject, SmallCacheObject}
-import org.greencheek.spy.extensions.FastSerializingTranscoder
+import org.greencheek.spray.cache.memcached.perf.state.{MediumCacheObject, LargeCacheObject, SmallCacheObject}
+import org.greencheek.spy.extensions.{SerializingTranscoder, FastSerializingTranscoder}
+import scala.collection.JavaConversions._
 
 /**
  * Created by dominictootell on 01/06/2014.
@@ -47,6 +48,25 @@ object CacheFactory {
     )
   }
 
+  def createMediumXXJavaTextCache : MemcachedCache[MediumCacheObject] = {
+    new MemcachedCache[MediumCacheObject](
+      memcachedHosts = System.getProperty("memcached.hosts","localhost:11211"),
+      maxCapacity = 10,
+      keyHashType = XXJavaHash,
+      protocol =  Protocol.TEXT
+    )
+  }
+
+  def createMediumCompressedXXJavaTextCache : MemcachedCache[MediumCacheObject] = {
+    new MemcachedCache[MediumCacheObject](
+      memcachedHosts = System.getProperty("memcached.hosts","localhost:11211"),
+      maxCapacity = 10,
+      keyHashType = XXJavaHash,
+      protocol =  Protocol.TEXT,
+      serializingTranscoder = new FastSerializingTranscoder(SerializingTranscoder.MAX_CONTENT_SIZE_IN_BYTES,4096)
+    )
+  }
+
   def createLargeXXJavaTextCacheWithFST : MemcachedCache[LargeCacheObject] = {
     new MemcachedCache[LargeCacheObject](
       memcachedHosts = System.getProperty("memcached.hosts","localhost:11211"),
@@ -63,7 +83,9 @@ object CacheFactory {
       maxCapacity = 10,
       keyHashType = XXJavaHash,
       protocol =  Protocol.TEXT,
-      serializingTranscoder =  new FastSerializingTranscoder(false,Array(classOf[LargeCacheObject]))
+      serializingTranscoder =  new FastSerializingTranscoder(FastSerializingTranscoder.DEFAULT_SHARE_REFERENCES,Array[Class[_]](classOf[LargeCacheObject]))
+
+       //new FastSerializingTranscoder(false,Array(classOf[LargeCacheObject]))
     )
   }
 
