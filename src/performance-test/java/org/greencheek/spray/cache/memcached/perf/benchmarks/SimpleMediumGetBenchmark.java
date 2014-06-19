@@ -32,7 +32,7 @@ public class SimpleMediumGetBenchmark {
 
     public static void main(String[] args) throws RunnerException {
         Options opts  = new OptionsBuilder()
-                .include("org.greencheek.spray.cache.memcached.perf.benchmarks.SimpleLargeGetBenchmark.*")
+                .include("org.greencheek.spray.cache.memcached.perf.benchmarks.SimpleMediumGetBenchmark.*")
                 .warmupIterations(20)
                 .measurementIterations(20)
                 .timeUnit(TimeUnit.MILLISECONDS)

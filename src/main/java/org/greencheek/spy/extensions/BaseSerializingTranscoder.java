@@ -41,7 +41,7 @@ public abstract class BaseSerializingTranscoder extends SpyObject {
     /**
      * Default compression threshold value.
      */
-    public static final int DEFAULT_COMPRESSION_THRESHOLD = 16384;
+    public static final int DEFAULT_COMPRESSION_THRESHOLD = 8192;
 
     private static final String DEFAULT_CHARSET = "UTF-8";
 

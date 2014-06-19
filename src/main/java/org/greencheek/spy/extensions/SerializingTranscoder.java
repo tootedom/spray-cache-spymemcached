@@ -35,7 +35,7 @@ import java.util.Date;
 public class SerializingTranscoder extends BaseSerializingTranscoder implements
         Transcoder<Object> {
 
-  public static int MAX_CONTENT_SIZE_IN_BYTES = CachedData.MAX_SIZE;
+  public static final int MAX_CONTENT_SIZE_IN_BYTES = CachedData.MAX_SIZE;
   // General flags
   static final int SERIALIZED = 1;
   static final int COMPRESSED = 2;
