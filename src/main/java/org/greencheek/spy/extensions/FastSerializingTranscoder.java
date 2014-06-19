@@ -13,7 +13,7 @@ import java.io.IOException;
  */
 public class FastSerializingTranscoder extends SerializingTranscoder {
     public static final boolean DEFAULT_SHARE_REFERENCES = true;
-    public static final int DEFAULT_COMPRESSION_THRESHOLD = 8192;
+    public static final int DEFAULT_COMPRESSION_THRESHOLD = 4096;
     public static final int MAX_CONTENT_SIZE_IN_BYTES = CachedData.MAX_SIZE;
     // ! reuse this Object, it caches metadata. Performance degrades massively
     // if you create a new Configuration Object with each serialization !
