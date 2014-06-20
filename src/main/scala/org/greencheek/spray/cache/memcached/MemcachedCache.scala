@@ -61,7 +61,10 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val asciiOnlyKeys : Boolean = false,
                                    val hostStringParser : HostStringParser = CommaSeparatedHostAndPortStringParser,
                                    val hostHostResolver : HostResolver = AddressByNameHostResolver,
-                                   val hostValidation : HostValidation = TCPHostValidation)
+                                   val hostValidation : HostValidation = TCPHostValidation,
+                                   val useStaleCache : Boolean = false,
+                                   val staleCacheAdditionalTimeToLive : Duration = MemcachedCache.DEFAULT_EXPIRY,
+                                   val staleCachePrefix  : String = "stale-")
   extends Cache[Serializable] {
 
   @volatile private var isEnabled = false
@@ -270,7 +273,8 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   }
 
-  private def writeToDistributedCache(key: String, value : Serializable, timeToLive : Duration) : Unit = {
+  private def writeToDistributedCache(key: String, value : Serializable,
+                                      timeToLive : Duration, waitForMemcachedSet : Boolean) : Unit = {
     val entryTTL : Long = getDuration(timeToLive)
 
     if( waitForMemcachedSet ) {
@@ -330,7 +334,14 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   }
 
   def apply(itemExpiry : Duration, key : Any, genValue: () => Future[Serializable])(implicit ec: ExecutionContext): Future[Serializable] = {
-    val keyString = getHashedKey(key.toString)
+    val keyToString : String = key.toString
+    val keyString = getHashedKey(keyToString)
+
+    var staleCacheKey : String = null
+    if(useStaleCache) {
+      staleCacheKey = getHashedKey(staleCachePrefix + keyToString)
+    }
+
     if(!isEnabled) {
       logCacheMiss(keyString)
       genValue()
@@ -346,9 +357,13 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
           val alreadyStoredFuture : Future[Serializable] = store.putIfAbsent(keyString, promise.future)
           if(alreadyStoredFuture == null) {
             logger.debug("set requested for {}", keyString)
-            cacheWriteFunction(genValue(), promise, keyString, itemExpiry, ec)
+            cacheWriteFunction(genValue(), promise, keyString, staleCacheKey, itemExpiry,itemExpiry.plus(staleCacheAdditionalTimeToLive), ec)
           } else {
-            alreadyStoredFuture
+            if(useStaleCache) {
+              getFromDistributedCache(staleCacheKey).getOrElse(alreadyStoredFuture)
+            } else {
+              alreadyStoredFuture
+            }
           }
         }
       }
@@ -369,14 +384,19 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
    * @return
    */
   private def cacheWriteFunction(future : Future[Serializable],promise: Promise[Serializable],
-                                 key : String, itemExpiry : Duration,
+                                 key : String, staleCacheKey : String, itemExpiry : Duration,
+                                 staleItemExpiry : Duration,
                                  ec: ExecutionContext) : Future[Serializable] = {
     future.onComplete {
       value =>
         // Need to check memcached exception here
         try {
           if (!value.isFailure) {
-            writeToDistributedCache(key,value.get,itemExpiry)
+            val entryValue : Serializable = value.get
+            // overwrite the stale cache entry
+            writeToDistributedCache(staleCacheKey,entryValue,staleItemExpiry,false)
+            // write the cache entry
+            writeToDistributedCache(key,entryValue,itemExpiry,waitForMemcachedSet)
           }
         } catch {
           case e: Exception => {
