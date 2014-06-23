@@ -494,6 +494,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     promise.future
   }
 
+  // TODO remove from stale.
   def remove(key: Any) = {
     if(!isEnabled) {
       None

@@ -107,7 +107,8 @@ class StaleCacheSpec extends MemcachedBasedSpec {
         doHostConnectionAttempt = true, waitForMemcachedSet = true,
         useStaleCache = true, timeToLive = Duration(1,TimeUnit.SECONDS),
         staleCacheAdditionalTimeToLive = Duration(4,TimeUnit.SECONDS),
-        staleCacheMemachedGetTimeout = Duration(1,TimeUnit.MILLISECONDS)
+        staleCacheMemachedGetTimeout = Duration(1,TimeUnit.MILLISECONDS),
+        waitForMemcachedRemove = true
       )
 
       cache("content3")( future {
