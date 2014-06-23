@@ -353,7 +353,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     var staleCacheKey : String = null
     var staleCacheExpiry : Duration = null;
     if(useStaleCache) {
-      staleCacheKey = staleCachePrefix + keyToString
+      staleCacheKey = createStaleCacheKey(keyToString)
       staleCacheExpiry = itemExpiry.plus(staleCacheAdditionalTimeToLive)
     }
 
@@ -375,7 +375,6 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
             cacheWriteFunction(genValue(), promise, keyString, staleCacheKey, itemExpiry,staleCacheExpiry , ec)
           } else {
             if(useStaleCache) {
-//              getFromDistributedCache(staleCacheKey).getOrElse(alreadyStoredFuture)
               getFromStaleDistributedCache(staleCacheKey,alreadyStoredFuture,ec)
             } else {
               alreadyStoredFuture
@@ -385,7 +384,6 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       }
       else  {
         if(useStaleCache) {
-//          getFromDistributedCache(staleCacheKey).getOrElse(existingFuture)
           getFromStaleDistributedCache(staleCacheKey,existingFuture,ec)
         } else {
           logCacheHit(keyString)
@@ -393,6 +391,10 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         }
       }
     }
+  }
+
+  private def createStaleCacheKey(key : String) : String = {
+    staleCachePrefix + key
   }
 
   private def getFromStaleDistributedCache(key : String, backendFuture : Future[Serializable],
@@ -494,7 +496,6 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     promise.future
   }
 
-  // TODO remove from stale.
   def remove(key: Any) = {
     if(!isEnabled) {
       None
@@ -512,6 +513,8 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         }
         case future => {
           try {
+            if(useStaleCache) memcached.delete(createStaleCacheKey(keyString))
+
             if(waitForMemcachedRemove) {
               val futureRemove = memcached.delete(keyString)
               try {

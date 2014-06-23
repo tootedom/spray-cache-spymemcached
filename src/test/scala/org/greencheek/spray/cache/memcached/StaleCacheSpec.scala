@@ -107,7 +107,7 @@ class StaleCacheSpec extends MemcachedBasedSpec {
         doHostConnectionAttempt = true, waitForMemcachedSet = true,
         useStaleCache = true, timeToLive = Duration(1,TimeUnit.SECONDS),
         staleCacheAdditionalTimeToLive = Duration(4,TimeUnit.SECONDS),
-        staleCacheMemachedGetTimeout = Duration(1,TimeUnit.MILLISECONDS),
+        staleCacheMemachedGetTimeout = Duration(100,TimeUnit.MILLISECONDS),
         waitForMemcachedRemove = true
       )
 
@@ -122,21 +122,31 @@ class StaleCacheSpec extends MemcachedBasedSpec {
       Thread.sleep(2500)
 
       val passThrough = cache("content3")( future {
-        Thread.sleep(10000)
+        Thread.sleep(5000)
         "NEW VALUE"
       })
 
 
-      cache.remove("stalecontent3")
+      cache.remove("content3")
 
       cache("content3")("B")
       cache("content3")("B")
       cache("content3")("B")
-      cache("content3")("B").await === "NEW VALUE"
-      cache("content3")("B").await === "NEW VALUE"
+      cache("content3")("B").await === "B"
+      cache("content3")("B").await === "B"
 
       passThrough.await === "NEW VALUE"
 
+      Thread.sleep(2500)
+
+
+      cache("content3")(future {
+        Thread.sleep(1000)
+        "B"
+      })
+
+      cache("content3")("B")
+      cache("content3")("B")
       cache("content3")("B").await === "NEW VALUE"
 
 
