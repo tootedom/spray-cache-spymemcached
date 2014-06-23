@@ -22,6 +22,8 @@ import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.{AddressByName
 import org.greencheek.spray.cache.memcached.hostparsing.connectionchecking.{TCPHostValidation, HostValidation}
 import scala.Some
 import scala.Some
+import scala.util.Success
+import net.spy.memcached.internal.CheckedOperationTimeoutException
 
 /*
  * Created by dominictootell on 26/03/2014.
@@ -64,7 +66,9 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val hostValidation : HostValidation = TCPHostValidation,
                                    val useStaleCache : Boolean = false,
                                    val staleCacheAdditionalTimeToLive : Duration = MemcachedCache.DEFAULT_EXPIRY,
-                                   val staleCachePrefix  : String = "stale-")
+                                   val staleCachePrefix  : String = "stale",
+                                   val staleMaxCapacity : Int = MemcachedCache.DEFAULT_CAPACITY,
+                                   val staleCacheMemachedGetTimeout : Duration = Duration.MinusInf)
   extends Cache[Serializable] {
 
   @volatile private var isEnabled = false
@@ -156,13 +160,18 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   }
 
   private val logger  : Logger = LoggerFactory.getLogger(classOf[MemcachedCache[Serializable]])
-  private val cachedHitMissLogger  : Logger  = LoggerFactory.getLogger("MemcachedCacheHitsLogger")
+  private val cacheHitMissLogger  : Logger  = LoggerFactory.getLogger("MemcachedCacheHitsLogger")
 
   require(maxCapacity >= 0, "maxCapacity must not be negative")
 
   private[cache] val store = new ConcurrentLinkedHashMap.Builder[String, Future[Serializable]]
     .initialCapacity(maxCapacity)
     .maximumWeightedCapacity(maxCapacity)
+    .build()
+
+  private[cache] val staleStore = new ConcurrentLinkedHashMap.Builder[String, Future[Serializable]]
+    .initialCapacity(staleMaxCapacity)
+    .maximumWeightedCapacity(staleMaxCapacity)
     .build()
 
   private val keyHashingFunction : KeyHashing = keyHashType match {
@@ -179,6 +188,10 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   private val setWaitDurationInMillis = setWaitDuration.toMillis
   private val memcachedGetTimeoutMillis = memcachedGetTimeout.toMillis
+  private val staleCacheMemachedGetTimeoutMillis = staleCacheMemachedGetTimeout match {
+    case Duration.MinusInf => memcachedGetTimeoutMillis
+    case _ => staleCacheMemachedGetTimeout.toMillis
+  }
 
   private def createXXKeyHasher(asciiOnlyKeys : Boolean, native : Boolean) : KeyHashing = {
     if(asciiOnlyKeys) {
@@ -221,11 +234,11 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   }
 
   private def logCacheHit(key: String): Unit = {
-    cachedHitMissLogger.debug("{ \"cachehit\" : \"{}\"}",key)
+    cacheHitMissLogger.debug("{ \"cachehit\" : \"{}\"}",key)
   }
 
   private def logCacheMiss(key: String): Unit = {
-    cachedHitMissLogger.debug("{ \"cachemiss\" : \"{}\"}",key)
+    cacheHitMissLogger.debug("{ \"cachemiss\" : \"{}\"}",key)
   }
 
   private def getFromDistributedCache(key: String): Option[Future[Serializable]] = {
@@ -240,7 +253,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
             Some(Future.successful(cacheVal.asInstanceOf[Serializable]))
         }
     } catch {
-      case e : OperationTimeoutException => {
+      case e @ (_ : OperationTimeoutException | _ :  CheckedOperationTimeoutException | _ : TimeoutException) => {
         logger.error("timeout when retrieving key {} from memcached",key)
         None
       }
@@ -338,8 +351,10 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     val keyString = getHashedKey(keyToString)
 
     var staleCacheKey : String = null
+    var staleCacheExpiry : Duration = null;
     if(useStaleCache) {
-      staleCacheKey = getHashedKey(staleCachePrefix + keyToString)
+      staleCacheKey = staleCachePrefix + keyToString
+      staleCacheExpiry = itemExpiry.plus(staleCacheAdditionalTimeToLive)
     }
 
     if(!isEnabled) {
@@ -357,10 +372,11 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
           val alreadyStoredFuture : Future[Serializable] = store.putIfAbsent(keyString, promise.future)
           if(alreadyStoredFuture == null) {
             logger.debug("set requested for {}", keyString)
-            cacheWriteFunction(genValue(), promise, keyString, staleCacheKey, itemExpiry,itemExpiry.plus(staleCacheAdditionalTimeToLive), ec)
+            cacheWriteFunction(genValue(), promise, keyString, staleCacheKey, itemExpiry,staleCacheExpiry , ec)
           } else {
             if(useStaleCache) {
-              getFromDistributedCache(staleCacheKey).getOrElse(alreadyStoredFuture)
+//              getFromDistributedCache(staleCacheKey).getOrElse(alreadyStoredFuture)
+              getFromStaleDistributedCache(staleCacheKey,alreadyStoredFuture,ec)
             } else {
               alreadyStoredFuture
             }
@@ -368,11 +384,67 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         }
       }
       else  {
+        if(useStaleCache) {
+//          getFromDistributedCache(staleCacheKey).getOrElse(existingFuture)
+          getFromStaleDistributedCache(staleCacheKey,existingFuture,ec)
+        } else {
           logCacheHit(keyString)
           existingFuture
+        }
       }
     }
   }
+
+  private def getFromStaleDistributedCache(key : String, backendFuture : Future[Serializable],
+                                           ec: ExecutionContext) : Future[Serializable] = {
+
+    // protection against thundering herd on stale memcached
+    val existingFuture : Future[Serializable] = staleStore.get(key)
+
+    if(existingFuture == null) {
+      val promise = Promise[Serializable]()
+      val alreadyStoredFuture : Future[Serializable] = staleStore.putIfAbsent(key, promise.future)
+      if(alreadyStoredFuture==null) {
+        Future {
+          try {
+            val future = memcached.asyncGet(key)
+            val cacheVal = future.get(staleCacheMemachedGetTimeoutMillis, TimeUnit.MILLISECONDS)
+            if (cacheVal == null) {
+              logCacheMiss(key)
+              promise.completeWith(backendFuture)
+            } else {
+              logCacheHit(key)
+              promise.success(cacheVal.asInstanceOf[Serializable])
+            }
+          } catch {
+            case e @ (_ : OperationTimeoutException | _ :  CheckedOperationTimeoutException | _ : TimeoutException) => {
+              logger.error("timeout when retrieving key {} from memcached", key)
+              promise.completeWith(backendFuture)
+            }
+            case e: Exception => {
+              logger.error("Unable to contact memcached", e)
+              promise.completeWith(backendFuture)
+            }
+            case e: Throwable => {
+              logger.error("Exception thrown when communicating with memcached", e)
+              promise.completeWith(backendFuture)
+            }
+          } finally {
+            staleStore.remove(key, promise.future)
+          }
+        }(ec)
+
+        promise.future
+      }
+      else {
+        alreadyStoredFuture
+      }
+    }
+    else {
+      existingFuture
+    }
+  }
+
 
   /**
    * write to memcached when the future completes, the generated value,
@@ -393,8 +465,11 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         try {
           if (!value.isFailure) {
             val entryValue : Serializable = value.get
-            // overwrite the stale cache entry
-            writeToDistributedCache(staleCacheKey,entryValue,staleItemExpiry,false)
+
+            if(useStaleCache) {
+              // overwrite the stale cache entry
+              writeToDistributedCache(staleCacheKey, entryValue, staleItemExpiry, false)
+            }
             // write the cache entry
             writeToDistributedCache(key,entryValue,itemExpiry,waitForMemcachedSet)
           }
