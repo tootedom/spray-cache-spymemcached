@@ -5,24 +5,20 @@ import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap
 import scala.concurrent.{Promise, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import net.spy.memcached._
-import java.net.{InetSocketAddress, InetAddress}
+import java.net.InetSocketAddress
 import org.slf4j.{LoggerFactory, Logger}
 import java.util.concurrent.{TimeoutException, TimeUnit}
 import net.spy.memcached.ConnectionFactoryBuilder.{Protocol, Locator}
 import net.spy.memcached.transcoders.Transcoder
-import org.greencheek.spy.extensions.{FastSerializingTranscoder, SerializingTranscoder}
-import org.greencheek.dns.lookup.{TCPAddressChecker, AddressChecker, LookupService}
+import org.greencheek.spy.extensions.{FastSerializingTranscoder}
 import scala.collection.JavaConversions._
 import org.greencheek.spray.cache.memcached.keyhashing._
-import scala.Some
 import org.greencheek.spy.extensions.connection.CustomConnectionFactoryBuilder
 import org.greencheek.spy.extensions.hashing.{JenkinsHash => JenkinsHashAlgo, AsciiXXHashAlogrithm, XXHashAlogrithm}
 import org.greencheek.spray.cache.memcached.hostparsing.{CommaSeparatedHostAndPortStringParser, HostStringParser}
 import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.{AddressByNameHostResolver, HostResolver}
 import org.greencheek.spray.cache.memcached.hostparsing.connectionchecking.{TCPHostValidation, HostValidation}
 import scala.Some
-import scala.Some
-import scala.util.Success
 import net.spy.memcached.internal.CheckedOperationTimeoutException
 
 /*
@@ -58,7 +54,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val throwExceptionOnNoHosts : Boolean = false,
                                    val dnsConnectionTimeout : Duration = Duration(3,TimeUnit.SECONDS),
                                    val doHostConnectionAttempt : Boolean = false,
-                                   val hostConnectionAttemptTimeout : Duration = Duration(1,TimeUnit.SECONDS),
+                                   val hostConnectionAttemptTimeout : Duration = MemcachedCache.ONE_SECOND,
                                    val waitForMemcachedSet : Boolean = false,
                                    val setWaitDuration : Duration = Duration(2,TimeUnit.SECONDS),
                                    val allowFlush : Boolean = false,
@@ -71,9 +67,9 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val hostHostResolver : HostResolver = AddressByNameHostResolver,
                                    val hostValidation : HostValidation = TCPHostValidation,
                                    val useStaleCache : Boolean = false,
-                                   val staleCacheAdditionalTimeToLive : Duration = MemcachedCache.DEFAULT_EXPIRY,
+                                   val staleCacheAdditionalTimeToLive : Duration = Duration.MinusInf,
                                    val staleCachePrefix  : String = "stale",
-                                   val staleMaxCapacity : Int = MemcachedCache.DEFAULT_CAPACITY,
+                                   val staleMaxCapacity : Int = -1,
                                    val staleCacheMemachedGetTimeout : Duration = Duration.MinusInf)
   extends Cache[Serializable] {
 
@@ -175,9 +171,12 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     .maximumWeightedCapacity(maxCapacity)
     .build()
 
+  private val staleMaxCapacityValue : Int = if (staleMaxCapacity == -1) maxCapacity else staleMaxCapacityValue
+  private val staleCacheAdditionalTimeToLiveValue : Duration = if (staleCacheAdditionalTimeToLive == Duration.MinusInf) timeToLive else staleCacheAdditionalTimeToLive
+
   private[cache] val staleStore = new ConcurrentLinkedHashMap.Builder[String, Future[Serializable]]
-    .initialCapacity(staleMaxCapacity)
-    .maximumWeightedCapacity(staleMaxCapacity)
+    .initialCapacity(staleMaxCapacityValue)
+    .maximumWeightedCapacity(staleMaxCapacityValue)
     .build()
 
   private val keyHashingFunction : KeyHashing = keyHashType match {
@@ -360,7 +359,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     var staleCacheExpiry : Duration = null;
     if(useStaleCache) {
       staleCacheKey = createStaleCacheKey(keyToString)
-      staleCacheExpiry = itemExpiry.plus(staleCacheAdditionalTimeToLive)
+      staleCacheExpiry = itemExpiry.plus(staleCacheAdditionalTimeToLiveValue)
     }
 
     if(!isEnabled) {

@@ -26,6 +26,12 @@ public class SimpleLargeGetBenchmark {
 
     @GenerateMicroBenchmark
     @BenchmarkMode({Mode.SampleTime})
+    public LargeCacheObject simpleGetWithFSTStaleCache(LargeCacheKey key, LargeCacheObject value,XXJavaHashLargeTextBenchmarkCacheWithFSTWithStale cache) {
+        return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.testLargeGetWithFSTWithStale(key, value, cache);
+    }
+
+    @GenerateMicroBenchmark
+    @BenchmarkMode({Mode.SampleTime})
     public LargeCacheObject simpleGetWithFST(LargeCacheKey key, LargeCacheObject value,XXJavaHashLargeTextBenchmarkCacheWithFST cache) {
         return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.testLargeGetWithFST(key, value, cache);
     }

@@ -43,6 +43,10 @@ object SimpleGetBenchmarks {
     return cache.cache.apply(key)(value).await
   }
 
+  def testLargeGetWithFSTWithStale(key :LargeCacheKey, value :LargeCacheObject, cache : XXJavaHashLargeTextBenchmarkCacheWithFSTWithStale) : LargeCacheObject = {
+    return cache.cache.apply(key)(value).await
+  }
+
   def testLargeGetWithFSTKnownClasses(key :LargeCacheKey, value :LargeCacheObject, cache : XXJavaHashLargeTextBenchmarkCacheWithFSTKnownClasses) : LargeCacheObject = {
     return cache.cache.apply(key)(value).await
   }
