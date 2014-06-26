@@ -54,7 +54,7 @@ class DigestKeyHashing(val algorithm : String, val numberOfDigests : Int = -1,
   }
 
   private def digest(input: Array[Byte]): Array[Byte] = {
-    var md: MessageDigest = digests.remove()
+    var md: MessageDigest = digests.take()
     val result: Array[Byte] = md.digest(input)
     md.reset()
     digests.add(md)

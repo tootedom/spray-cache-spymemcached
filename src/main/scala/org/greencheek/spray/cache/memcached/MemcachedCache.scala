@@ -36,6 +36,12 @@ object MemcachedCache {
   val XXHASH_ALGORITHM: HashAlgorithm = new XXHashAlogrithm
   val JENKINS_ALGORITHM: HashAlgorithm = new JenkinsHashAlgo
   val DEFAULT_ALGORITHM: HashAlgorithm = DefaultHashAlgorithm.KETAMA_HASH
+
+  val CACHE_TYPE_VALUE_CALCULATION : String = "value_calculation_cache"
+  val CACHE_TYPE_CACHE_DISABLED : String = "disabled_cache"
+  val CACHE_TYPE_STALE_CACHE : String = "stale_distributed_cache"
+  val CACHE_TYPE_DISTRIBUTED_CACHE : String = "distributed_cache"
+
 }
 
 
@@ -233,12 +239,12 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     }
   }
 
-  private def logCacheHit(key: String): Unit = {
-    cacheHitMissLogger.debug("{ \"cachehit\" : \"{}\"}",key)
+  private def logCacheHit(key: Any, cacheType: Any): Unit = {
+    cacheHitMissLogger.debug("{ \"cachehit\" : \"{}\", \"cachetype\" : \"{}\"}",key,cacheType)
   }
 
-  private def logCacheMiss(key: String): Unit = {
-    cacheHitMissLogger.debug("{ \"cachemiss\" : \"{}\"}",key)
+  private def logCacheMiss(key: Any, cacheType: Any): Unit = {
+    cacheHitMissLogger.debug("{ \"cachemiss\" : \"{}\", \"cachetype\" : \"{}\"}",key,cacheType)
   }
 
   private def getFromDistributedCache(key: String): Option[Future[Serializable]] = {
@@ -246,10 +252,10 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         val future =  memcached.asyncGet(key)
         val cacheVal = future.get(memcachedGetTimeoutMillis,TimeUnit.MILLISECONDS)
         if(cacheVal==null){
-            logCacheMiss(key)
+            logCacheMiss(key,MemcachedCache.CACHE_TYPE_DISTRIBUTED_CACHE)
             None
         } else {
-            logCacheHit(key)
+            logCacheHit(key,MemcachedCache.CACHE_TYPE_DISTRIBUTED_CACHE)
             Some(Future.successful(cacheVal.asInstanceOf[Serializable]))
         }
     } catch {
@@ -313,7 +319,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   def get(key: Any): Option[Future[Serializable]] = {
     val keyString : String = getHashedKey(key.toString)
     if(!isEnabled) {
-      logCacheMiss(keyString)
+      logCacheMiss(keyString,MemcachedCache.CACHE_TYPE_CACHE_DISABLED)
       None
     } else {
       val future : Future[Serializable] = store.get(keyString)
@@ -321,8 +327,8 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
           getFromDistributedCache(keyString)
       }
       else {
-          logCacheHit(keyString)
-          Some(future)
+        logCacheHit(keyString,MemcachedCache.CACHE_TYPE_VALUE_CALCULATION)
+        Some(getFromStaleDistributedCache(keyString,future,null))
       }
     }
   }
@@ -358,7 +364,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     }
 
     if(!isEnabled) {
-      logCacheMiss(keyString)
+      logCacheMiss(keyString,MemcachedCache.CACHE_TYPE_CACHE_DISABLED)
       genValue()
     }
     else {
@@ -386,7 +392,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         if(useStaleCache) {
           getFromStaleDistributedCache(staleCacheKey,existingFuture,ec)
         } else {
-          logCacheHit(keyString)
+          logCacheHit(keyString,MemcachedCache.CACHE_TYPE_VALUE_CALCULATION)
           existingFuture
         }
       }
@@ -395,6 +401,37 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   private def createStaleCacheKey(key : String) : String = {
     staleCachePrefix + key
+  }
+
+  private def getFromStaleDistributedCache(key : String,
+                                           promise : Promise[Serializable],
+                                           backendFuture : Future[Serializable]) : Unit = {
+    try {
+      val future = memcached.asyncGet(key)
+      val cacheVal = future.get(staleCacheMemachedGetTimeoutMillis, TimeUnit.MILLISECONDS)
+      if (cacheVal == null) {
+        logCacheMiss(key,MemcachedCache.CACHE_TYPE_STALE_CACHE)
+        promise.completeWith(backendFuture)
+      } else {
+        logCacheHit(key,MemcachedCache.CACHE_TYPE_STALE_CACHE)
+        promise.success(cacheVal.asInstanceOf[Serializable])
+      }
+    } catch {
+      case e @ (_ : OperationTimeoutException | _ :  CheckedOperationTimeoutException | _ : TimeoutException) => {
+        logger.error("timeout when retrieving key {} from memcached", key)
+        promise.completeWith(backendFuture)
+      }
+      case e: Exception => {
+        logger.error("Unable to contact memcached", e)
+        promise.completeWith(backendFuture)
+      }
+      case e: Throwable => {
+        logger.error("Exception thrown when communicating with memcached", e)
+        promise.completeWith(backendFuture)
+      }
+    } finally {
+      staleStore.remove(key, promise.future)
+    }
   }
 
   private def getFromStaleDistributedCache(key : String, backendFuture : Future[Serializable],
@@ -407,35 +444,14 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       val promise = Promise[Serializable]()
       val alreadyStoredFuture : Future[Serializable] = staleStore.putIfAbsent(key, promise.future)
       if(alreadyStoredFuture==null) {
-        Future {
-          try {
-            val future = memcached.asyncGet(key)
-            val cacheVal = future.get(staleCacheMemachedGetTimeoutMillis, TimeUnit.MILLISECONDS)
-            if (cacheVal == null) {
-              logCacheMiss(key)
-              promise.completeWith(backendFuture)
-            } else {
-              logCacheHit(key)
-              promise.success(cacheVal.asInstanceOf[Serializable])
-            }
-          } catch {
-            case e @ (_ : OperationTimeoutException | _ :  CheckedOperationTimeoutException | _ : TimeoutException) => {
-              logger.error("timeout when retrieving key {} from memcached", key)
-              promise.completeWith(backendFuture)
-            }
-            case e: Exception => {
-              logger.error("Unable to contact memcached", e)
-              promise.completeWith(backendFuture)
-            }
-            case e: Throwable => {
-              logger.error("Exception thrown when communicating with memcached", e)
-              promise.completeWith(backendFuture)
-            }
-          } finally {
-            staleStore.remove(key, promise.future)
-          }
-        }(ec)
-
+        if(ec!=null) {
+          Future {
+            getFromStaleDistributedCache(key, promise, backendFuture)
+          }(ec)
+        }
+        else {
+          getFromStaleDistributedCache(key, promise, backendFuture)
+        }
         promise.future
       }
       else {
