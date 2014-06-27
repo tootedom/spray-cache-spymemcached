@@ -358,7 +358,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     var staleCacheKey : String = null
     var staleCacheExpiry : Duration = null;
     if(useStaleCache) {
-      staleCacheKey = createStaleCacheKey(keyToString)
+      staleCacheKey = createStaleCacheKey(keyString)
       staleCacheExpiry = itemExpiry.plus(staleCacheAdditionalTimeToLiveValue)
     }
 
