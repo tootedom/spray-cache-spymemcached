@@ -5,23 +5,21 @@ import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap
 import scala.concurrent.{Promise, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import net.spy.memcached._
-import java.net.{InetSocketAddress, InetAddress}
+import java.net.InetSocketAddress
 import org.slf4j.{LoggerFactory, Logger}
 import java.util.concurrent.{TimeoutException, TimeUnit}
 import net.spy.memcached.ConnectionFactoryBuilder.{Protocol, Locator}
 import net.spy.memcached.transcoders.Transcoder
-import org.greencheek.spy.extensions.{FastSerializingTranscoder, SerializingTranscoder}
-import org.greencheek.dns.lookup.{TCPAddressChecker, AddressChecker, LookupService}
+import org.greencheek.spy.extensions.{FastSerializingTranscoder}
 import scala.collection.JavaConversions._
 import org.greencheek.spray.cache.memcached.keyhashing._
-import scala.Some
 import org.greencheek.spy.extensions.connection.CustomConnectionFactoryBuilder
 import org.greencheek.spy.extensions.hashing.{JenkinsHash => JenkinsHashAlgo, AsciiXXHashAlogrithm, XXHashAlogrithm}
 import org.greencheek.spray.cache.memcached.hostparsing.{CommaSeparatedHostAndPortStringParser, HostStringParser}
 import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.{AddressByNameHostResolver, HostResolver}
 import org.greencheek.spray.cache.memcached.hostparsing.connectionchecking.{TCPHostValidation, HostValidation}
 import scala.Some
-import scala.Some
+import net.spy.memcached.internal.CheckedOperationTimeoutException
 
 /*
  * Created by dominictootell on 26/03/2014.
@@ -34,6 +32,12 @@ object MemcachedCache {
   val XXHASH_ALGORITHM: HashAlgorithm = new XXHashAlogrithm
   val JENKINS_ALGORITHM: HashAlgorithm = new JenkinsHashAlgo
   val DEFAULT_ALGORITHM: HashAlgorithm = DefaultHashAlgorithm.KETAMA_HASH
+
+  val CACHE_TYPE_VALUE_CALCULATION : String = "value_calculation_cache"
+  val CACHE_TYPE_CACHE_DISABLED : String = "disabled_cache"
+  val CACHE_TYPE_STALE_CACHE : String = "stale_distributed_cache"
+  val CACHE_TYPE_DISTRIBUTED_CACHE : String = "distributed_cache"
+
 }
 
 
@@ -50,7 +54,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val throwExceptionOnNoHosts : Boolean = false,
                                    val dnsConnectionTimeout : Duration = Duration(3,TimeUnit.SECONDS),
                                    val doHostConnectionAttempt : Boolean = false,
-                                   val hostConnectionAttemptTimeout : Duration = Duration(1,TimeUnit.SECONDS),
+                                   val hostConnectionAttemptTimeout : Duration = MemcachedCache.ONE_SECOND,
                                    val waitForMemcachedSet : Boolean = false,
                                    val setWaitDuration : Duration = Duration(2,TimeUnit.SECONDS),
                                    val allowFlush : Boolean = false,
@@ -61,7 +65,12 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val asciiOnlyKeys : Boolean = false,
                                    val hostStringParser : HostStringParser = CommaSeparatedHostAndPortStringParser,
                                    val hostHostResolver : HostResolver = AddressByNameHostResolver,
-                                   val hostValidation : HostValidation = TCPHostValidation)
+                                   val hostValidation : HostValidation = TCPHostValidation,
+                                   val useStaleCache : Boolean = false,
+                                   val staleCacheAdditionalTimeToLive : Duration = Duration.MinusInf,
+                                   val staleCachePrefix  : String = "stale",
+                                   val staleMaxCapacity : Int = -1,
+                                   val staleCacheMemachedGetTimeout : Duration = Duration.MinusInf)
   extends Cache[Serializable] {
 
   @volatile private var isEnabled = false
@@ -153,13 +162,21 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   }
 
   private val logger  : Logger = LoggerFactory.getLogger(classOf[MemcachedCache[Serializable]])
-  private val cachedHitMissLogger  : Logger  = LoggerFactory.getLogger("MemcachedCacheHitsLogger")
+  private val cacheHitMissLogger  : Logger  = LoggerFactory.getLogger("MemcachedCacheHitsLogger")
 
   require(maxCapacity >= 0, "maxCapacity must not be negative")
 
   private[cache] val store = new ConcurrentLinkedHashMap.Builder[String, Future[Serializable]]
     .initialCapacity(maxCapacity)
     .maximumWeightedCapacity(maxCapacity)
+    .build()
+
+  private val staleMaxCapacityValue : Int = if (staleMaxCapacity == -1) maxCapacity else staleMaxCapacityValue
+  private val staleCacheAdditionalTimeToLiveValue : Duration = if (staleCacheAdditionalTimeToLive == Duration.MinusInf) timeToLive else staleCacheAdditionalTimeToLive
+
+  private[cache] val staleStore = new ConcurrentLinkedHashMap.Builder[String, Future[Serializable]]
+    .initialCapacity(staleMaxCapacityValue)
+    .maximumWeightedCapacity(staleMaxCapacityValue)
     .build()
 
   private val keyHashingFunction : KeyHashing = keyHashType match {
@@ -176,6 +193,10 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   private val setWaitDurationInMillis = setWaitDuration.toMillis
   private val memcachedGetTimeoutMillis = memcachedGetTimeout.toMillis
+  private val staleCacheMemachedGetTimeoutMillis = staleCacheMemachedGetTimeout match {
+    case Duration.MinusInf => memcachedGetTimeoutMillis
+    case _ => staleCacheMemachedGetTimeout.toMillis
+  }
 
   private def createXXKeyHasher(asciiOnlyKeys : Boolean, native : Boolean) : KeyHashing = {
     if(asciiOnlyKeys) {
@@ -217,12 +238,12 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     }
   }
 
-  private def logCacheHit(key: String): Unit = {
-    cachedHitMissLogger.debug("{ \"cachehit\" : \"{}\"}",key)
+  private def logCacheHit(key: Any, cacheType: Any): Unit = {
+    cacheHitMissLogger.debug("{ \"cachehit\" : \"{}\", \"cachetype\" : \"{}\"}",key,cacheType)
   }
 
-  private def logCacheMiss(key: String): Unit = {
-    cachedHitMissLogger.debug("{ \"cachemiss\" : \"{}\"}",key)
+  private def logCacheMiss(key: Any, cacheType: Any): Unit = {
+    cacheHitMissLogger.debug("{ \"cachemiss\" : \"{}\", \"cachetype\" : \"{}\"}",key,cacheType)
   }
 
   private def getFromDistributedCache(key: String): Option[Future[Serializable]] = {
@@ -230,14 +251,14 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         val future =  memcached.asyncGet(key)
         val cacheVal = future.get(memcachedGetTimeoutMillis,TimeUnit.MILLISECONDS)
         if(cacheVal==null){
-            logCacheMiss(key)
+            logCacheMiss(key,MemcachedCache.CACHE_TYPE_DISTRIBUTED_CACHE)
             None
         } else {
-            logCacheHit(key)
+            logCacheHit(key,MemcachedCache.CACHE_TYPE_DISTRIBUTED_CACHE)
             Some(Future.successful(cacheVal.asInstanceOf[Serializable]))
         }
     } catch {
-      case e : OperationTimeoutException => {
+      case e @ (_ : OperationTimeoutException | _ :  CheckedOperationTimeoutException | _ : TimeoutException) => {
         logger.error("timeout when retrieving key {} from memcached",key)
         None
       }
@@ -270,7 +291,8 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   }
 
-  private def writeToDistributedCache(key: String, value : Serializable, timeToLive : Duration) : Unit = {
+  private def writeToDistributedCache(key: String, value : Serializable,
+                                      timeToLive : Duration, waitForMemcachedSet : Boolean) : Unit = {
     val entryTTL : Long = getDuration(timeToLive)
 
     if( waitForMemcachedSet ) {
@@ -296,7 +318,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   def get(key: Any): Option[Future[Serializable]] = {
     val keyString : String = getHashedKey(key.toString)
     if(!isEnabled) {
-      logCacheMiss(keyString)
+      logCacheMiss(keyString,MemcachedCache.CACHE_TYPE_CACHE_DISABLED)
       None
     } else {
       val future : Future[Serializable] = store.get(keyString)
@@ -304,8 +326,8 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
           getFromDistributedCache(keyString)
       }
       else {
-          logCacheHit(keyString)
-          Some(future)
+        logCacheHit(keyString,MemcachedCache.CACHE_TYPE_VALUE_CALCULATION)
+        Some(getFromStaleDistributedCache(keyString,future,null))
       }
     }
   }
@@ -330,9 +352,18 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   }
 
   def apply(itemExpiry : Duration, key : Any, genValue: () => Future[Serializable])(implicit ec: ExecutionContext): Future[Serializable] = {
-    val keyString = getHashedKey(key.toString)
+    val keyToString : String = key.toString
+    val keyString = getHashedKey(keyToString)
+
+    var staleCacheKey : String = null
+    var staleCacheExpiry : Duration = null;
+    if(useStaleCache) {
+      staleCacheKey = createStaleCacheKey(keyString)
+      staleCacheExpiry = itemExpiry.plus(staleCacheAdditionalTimeToLiveValue)
+    }
+
     if(!isEnabled) {
-      logCacheMiss(keyString)
+      logCacheMiss(keyString,MemcachedCache.CACHE_TYPE_CACHE_DISABLED)
       genValue()
     }
     else {
@@ -346,18 +377,91 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
           val alreadyStoredFuture : Future[Serializable] = store.putIfAbsent(keyString, promise.future)
           if(alreadyStoredFuture == null) {
             logger.debug("set requested for {}", keyString)
-            cacheWriteFunction(genValue(), promise, keyString, itemExpiry, ec)
+            cacheWriteFunction(genValue(), promise, keyString, staleCacheKey, itemExpiry,staleCacheExpiry , ec)
           } else {
-            alreadyStoredFuture
+            if(useStaleCache) {
+              getFromStaleDistributedCache(staleCacheKey,alreadyStoredFuture,ec)
+            } else {
+              alreadyStoredFuture
+            }
           }
         }
       }
       else  {
-          logCacheHit(keyString)
+        if(useStaleCache) {
+          getFromStaleDistributedCache(staleCacheKey,existingFuture,ec)
+        } else {
+          logCacheHit(keyString,MemcachedCache.CACHE_TYPE_VALUE_CALCULATION)
           existingFuture
+        }
       }
     }
   }
+
+  private def createStaleCacheKey(key : String) : String = {
+    staleCachePrefix + key
+  }
+
+  private def getFromStaleDistributedCache(key : String,
+                                           promise : Promise[Serializable],
+                                           backendFuture : Future[Serializable]) : Unit = {
+    try {
+      val future = memcached.asyncGet(key)
+      val cacheVal = future.get(staleCacheMemachedGetTimeoutMillis, TimeUnit.MILLISECONDS)
+      if (cacheVal == null) {
+        logCacheMiss(key,MemcachedCache.CACHE_TYPE_STALE_CACHE)
+        promise.completeWith(backendFuture)
+      } else {
+        logCacheHit(key,MemcachedCache.CACHE_TYPE_STALE_CACHE)
+        promise.success(cacheVal.asInstanceOf[Serializable])
+      }
+    } catch {
+      case e @ (_ : OperationTimeoutException | _ :  CheckedOperationTimeoutException | _ : TimeoutException) => {
+        logger.error("timeout when retrieving key {} from memcached", key)
+        promise.completeWith(backendFuture)
+      }
+      case e: Exception => {
+        logger.error("Unable to contact memcached", e)
+        promise.completeWith(backendFuture)
+      }
+      case e: Throwable => {
+        logger.error("Exception thrown when communicating with memcached", e)
+        promise.completeWith(backendFuture)
+      }
+    } finally {
+      staleStore.remove(key, promise.future)
+    }
+  }
+
+  private def getFromStaleDistributedCache(key : String, backendFuture : Future[Serializable],
+                                           ec: ExecutionContext) : Future[Serializable] = {
+
+    // protection against thundering herd on stale memcached
+    val existingFuture : Future[Serializable] = staleStore.get(key)
+
+    if(existingFuture == null) {
+      val promise = Promise[Serializable]()
+      val alreadyStoredFuture : Future[Serializable] = staleStore.putIfAbsent(key, promise.future)
+      if(alreadyStoredFuture==null) {
+        if(ec!=null) {
+          Future {
+            getFromStaleDistributedCache(key, promise, backendFuture)
+          }(ec)
+        }
+        else {
+          getFromStaleDistributedCache(key, promise, backendFuture)
+        }
+        promise.future
+      }
+      else {
+        alreadyStoredFuture
+      }
+    }
+    else {
+      existingFuture
+    }
+  }
+
 
   /**
    * write to memcached when the future completes, the generated value,
@@ -369,14 +473,22 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
    * @return
    */
   private def cacheWriteFunction(future : Future[Serializable],promise: Promise[Serializable],
-                                 key : String, itemExpiry : Duration,
+                                 key : String, staleCacheKey : String, itemExpiry : Duration,
+                                 staleItemExpiry : Duration,
                                  ec: ExecutionContext) : Future[Serializable] = {
     future.onComplete {
       value =>
         // Need to check memcached exception here
         try {
           if (!value.isFailure) {
-            writeToDistributedCache(key,value.get,itemExpiry)
+            val entryValue : Serializable = value.get
+
+            if(useStaleCache) {
+              // overwrite the stale cache entry
+              writeToDistributedCache(staleCacheKey, entryValue, staleItemExpiry, false)
+            }
+            // write the cache entry
+            writeToDistributedCache(key,entryValue,itemExpiry,waitForMemcachedSet)
           }
         } catch {
           case e: Exception => {
@@ -416,6 +528,8 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         }
         case future => {
           try {
+            if(useStaleCache) memcached.delete(createStaleCacheKey(keyString))
+
             if(waitForMemcachedRemove) {
               val futureRemove = memcached.delete(keyString)
               try {

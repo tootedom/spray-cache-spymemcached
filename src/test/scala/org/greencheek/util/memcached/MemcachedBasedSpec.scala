@@ -20,10 +20,12 @@ trait MemcachedBasedSpec extends Specification {
   /** the map method allows to "post-process" the fragments after their creation */
   override def map(fs: => Fragments) = Step(startMemcached) ^ fs ^ Step(stopMemcached)
 
+  def useBinary : Boolean = true
+
   def startMemcached() = {
     portServerSocket = portUtil.findFreePort
     memcachedDport = portUtil.getPort(portServerSocket)
-    memcachedD = MemcachedDaemonFactory.startMemcachedDaemon(memcachedDport,true)
+    memcachedD = MemcachedDaemonFactory.startMemcachedDaemon(memcachedDport,useBinary)
   }
 
   def stopMemcached: Unit = {
