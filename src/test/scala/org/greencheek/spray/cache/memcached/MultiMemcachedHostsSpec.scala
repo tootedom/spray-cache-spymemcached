@@ -25,7 +25,7 @@ class MultiMemcachedHostsSpec extends MemcachedBasedSpec {
 
 
   "A Memcached cache" >> {
-    "can store values when one host is unavailabled" in memcachedContext {
+    "can store values when one host is unavailable" in memcachedContext {
 
       val randomPort = portUtil.getPort(portUtil.findFreePort)
       val hosts = "localhost:"+memcachedContext.memcached.port + ",localhost:"+randomPort

@@ -73,9 +73,6 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val staleCacheMemachedGetTimeout : Duration = Duration.MinusInf)
   extends Cache[Serializable] {
 
-  @volatile private var isEnabled = false
-  @volatile private var memcached: MemcachedClientIF = null;
-
   private val hashKeyPrefix = keyPrefix match {
     case None => false
     case Some(_ : String) => true
@@ -86,80 +83,10 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     case Some(prefix) => prefix
   }
 
-  private var parsedHosts : List[(String,Int)] =  hostStringParser.parseMemcachedNodeList(memcachedHosts)
-  parsedHosts match {
-    case Nil => {
-      if(throwExceptionOnNoHosts) {
-        throw new InstantiationError()
-      } else {
-        isEnabled = false
-      }
-    }
-    case hosts : List[(String,Int)] => {
-      var addresses : List[InetSocketAddress] = hostHostResolver.returnSocketAddressesForHostNames(parsedHosts,dnsConnectionTimeout)
-      addresses match {
-        case Nil => {
-          if(throwExceptionOnNoHosts) {
-            throw new InstantiationError()
-          } else {
-            isEnabled = false
-          }
-        }
-        case resolvedHosts : List[InetSocketAddress] => {
-          if(doHostConnectionAttempt) {
-            addresses = hostValidation.validateMemcacheHosts(hostConnectionAttemptTimeout,resolvedHosts)
-          }
-        }
-      }
+  private val client : Option[MemcachedClientIF] = createMemcachedClient(memcachedHosts)
+  @volatile private var isEnabled : Boolean = client.isDefined
+  private val memcached : MemcachedClientIF = if(isEnabled) { client.get } else { null }
 
-      addresses match {
-        case Nil => {
-          isEnabled = false
-        }
-        case hostsToUse : List[InetSocketAddress] => {
-          isEnabled = true
-          val builder: ConnectionFactoryBuilder = keyValidationRequired(keyHashType) match {
-            case true => new ConnectionFactoryBuilder();
-            case false => new CustomConnectionFactoryBuilder();
-          }
-          builder.setHashAlg(createHashAlgorithm(asciiOnlyKeys,hashAlgorithm))
-          builder.setLocatorType(hashingType)
-          builder.setProtocol(protocol)
-          builder.setReadBufferSize(readBufferSize)
-          builder.setFailureMode(failureMode)
-          builder.setTranscoder(serializingTranscoder)
-
-          memcached = new MemcachedClient(builder.build(),hostsToUse)
-        }
-
-      }
-    }
-
-  }
-
-  private def createHashAlgorithm(asciiOnlyKeys : Boolean, hashAlgorithm : HashAlgorithm) : HashAlgorithm = {
-    hashAlgorithm match {
-      case algo : XXHashAlogrithm => {
-        if(asciiOnlyKeys) {
-          new AsciiXXHashAlogrithm()
-        } else {
-          algo
-        }
-      }
-      case algo : HashAlgorithm  => algo
-    }
-  }
-
-  private def keyValidationRequired(keyHashType : KeyHashType ) : Boolean = {
-    keyHashType match {
-      case MD5KeyHash | MD5UpperKeyHash | MD5LowerKeyHash => false
-      case SHA256KeyHash | SHA256UpperKeyHash | SHA256LowerKeyHash => false
-      case XXJavaHash | XXNativeJavaHash => false
-      case JenkinsHash => false
-      case NoKeyHash => true
-      case _ => true
-    }
-  }
 
   private val logger  : Logger = LoggerFactory.getLogger(classOf[MemcachedCache[Serializable]])
   private val cacheHitMissLogger  : Logger  = LoggerFactory.getLogger("MemcachedCacheHitsLogger")
@@ -197,6 +124,84 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     case Duration.MinusInf => memcachedGetTimeoutMillis
     case _ => staleCacheMemachedGetTimeout.toMillis
   }
+
+
+  private def createMemcachedClient(memcachedHosts : String) : Option[MemcachedClient] = {
+    val parsedHosts : List[(String,Int)] =  hostStringParser.parseMemcachedNodeList(memcachedHosts)
+
+    parsedHosts match {
+      case Nil => {
+        if(throwExceptionOnNoHosts) {
+          throw new InstantiationError()
+        } else {
+         None
+        }
+      }
+      case hosts : List[(String,Int)] => {
+        var addresses : List[InetSocketAddress] = hostHostResolver.returnSocketAddressesForHostNames(parsedHosts,dnsConnectionTimeout)
+        addresses match {
+          case Nil => {
+            if(throwExceptionOnNoHosts) {
+              throw new InstantiationError()
+            } else {
+              None
+            }
+          }
+          case resolvedHosts : List[InetSocketAddress] => {
+            if(doHostConnectionAttempt) {
+              addresses = hostValidation.validateMemcacheHosts(hostConnectionAttemptTimeout,resolvedHosts)
+            }
+          }
+        }
+
+        addresses match {
+          case Nil => {
+            None
+          }
+          case hostsToUse : List[InetSocketAddress] => {
+            val builder: ConnectionFactoryBuilder = keyValidationRequired(keyHashType) match {
+              case true => new ConnectionFactoryBuilder();
+              case false => new CustomConnectionFactoryBuilder();
+            }
+            builder.setHashAlg(createHashAlgorithm(asciiOnlyKeys,hashAlgorithm))
+            builder.setLocatorType(hashingType)
+            builder.setProtocol(protocol)
+            builder.setReadBufferSize(readBufferSize)
+            builder.setFailureMode(failureMode)
+            builder.setTranscoder(serializingTranscoder)
+
+            Some(new MemcachedClient(builder.build(),hostsToUse))
+          }
+        }
+      }
+    }
+  }
+
+  private def createHashAlgorithm(asciiOnlyKeys : Boolean, hashAlgorithm : HashAlgorithm) : HashAlgorithm = {
+    hashAlgorithm match {
+      case algo : XXHashAlogrithm => {
+        if(asciiOnlyKeys) {
+          new AsciiXXHashAlogrithm()
+        } else {
+          algo
+        }
+      }
+      case algo : HashAlgorithm  => algo
+    }
+  }
+
+  private def keyValidationRequired(keyHashType : KeyHashType ) : Boolean = {
+    keyHashType match {
+      case MD5KeyHash | MD5UpperKeyHash | MD5LowerKeyHash => false
+      case SHA256KeyHash | SHA256UpperKeyHash | SHA256LowerKeyHash => false
+      case XXJavaHash | XXNativeJavaHash => false
+      case JenkinsHash => false
+      case NoKeyHash => true
+      case _ => true
+    }
+  }
+
+
 
   private def createXXKeyHasher(asciiOnlyKeys : Boolean, native : Boolean) : KeyHashing = {
     if(asciiOnlyKeys) {
@@ -589,7 +594,8 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   def close()= {
     if(isEnabled) {
-      store.clear();
+      store.clear()
+      staleStore.clear()
       memcached.shutdown()
       isEnabled = false;
     }
