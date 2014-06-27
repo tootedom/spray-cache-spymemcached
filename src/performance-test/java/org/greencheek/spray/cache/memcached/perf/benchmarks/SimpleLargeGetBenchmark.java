@@ -18,11 +18,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class SimpleLargeGetBenchmark {
 
-//    @GenerateMicroBenchmark
-//    @BenchmarkMode({Mode.SampleTime})
-//    public LargeCacheObject simpleGet(LargeCacheKey key, LargeCacheObject value,XXJavaHashLargeTextBenchmarkCache cache) {
-//        return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.testLargeGet(key, value, cache);
-//    }
+    @GenerateMicroBenchmark
+    @BenchmarkMode({Mode.SampleTime})
+    public LargeCacheObject simpleGet(LargeCacheKey key, LargeCacheObject value,XXJavaHashLargeTextBenchmarkCache cache) {
+        return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.testLargeGet(key, value, cache);
+    }
 
     @GenerateMicroBenchmark
     @BenchmarkMode({Mode.SampleTime})
@@ -30,17 +30,17 @@ public class SimpleLargeGetBenchmark {
         return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.testLargeGetWithFSTWithStale(key, value, cache);
     }
 
-//    @GenerateMicroBenchmark
-//    @BenchmarkMode({Mode.SampleTime})
-//    public LargeCacheObject simpleGetWithFST(LargeCacheKey key, LargeCacheObject value,XXJavaHashLargeTextBenchmarkCacheWithFST cache) {
-//        return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.testLargeGetWithFST(key, value, cache);
-//    }
-//
-//    @GenerateMicroBenchmark
-//    @BenchmarkMode({Mode.SampleTime})
-//    public LargeCacheObject simpleGetWithFSTKnownClasses(LargeCacheKey key, LargeCacheObject value,XXJavaHashLargeTextBenchmarkCacheWithFSTKnownClasses cache) {
-//        return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.testLargeGetWithFSTKnownClasses(key, value, cache);
-//    }
+    @GenerateMicroBenchmark
+    @BenchmarkMode({Mode.SampleTime})
+    public LargeCacheObject simpleGetWithFST(LargeCacheKey key, LargeCacheObject value,XXJavaHashLargeTextBenchmarkCacheWithFST cache) {
+        return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.testLargeGetWithFST(key, value, cache);
+    }
+
+    @GenerateMicroBenchmark
+    @BenchmarkMode({Mode.SampleTime})
+    public LargeCacheObject simpleGetWithFSTKnownClasses(LargeCacheKey key, LargeCacheObject value,XXJavaHashLargeTextBenchmarkCacheWithFSTKnownClasses cache) {
+        return org.greencheek.spray.cache.memcached.perftests.SimpleGetBenchmarks.testLargeGetWithFSTKnownClasses(key, value, cache);
+    }
 
 
 
