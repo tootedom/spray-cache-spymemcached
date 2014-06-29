@@ -10,7 +10,7 @@ import org.slf4j.{LoggerFactory, Logger}
 import java.util.concurrent.{TimeoutException, TimeUnit}
 import net.spy.memcached.ConnectionFactoryBuilder.{Protocol, Locator}
 import net.spy.memcached.transcoders.Transcoder
-import org.greencheek.spy.extensions.{FastSerializingTranscoder}
+import org.greencheek.spy.extensions.FastSerializingTranscoder
 import scala.collection.JavaConversions._
 import org.greencheek.spray.cache.memcached.keyhashing._
 import org.greencheek.spy.extensions.connection.CustomConnectionFactoryBuilder
@@ -18,7 +18,6 @@ import org.greencheek.spy.extensions.hashing.{JenkinsHash => JenkinsHashAlgo, As
 import org.greencheek.spray.cache.memcached.hostparsing.{CommaSeparatedHostAndPortStringParser, HostStringParser}
 import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.{AddressByNameHostResolver, HostResolver}
 import org.greencheek.spray.cache.memcached.hostparsing.connectionchecking.{TCPHostValidation, HostValidation}
-import scala.Some
 import net.spy.memcached.internal.CheckedOperationTimeoutException
 
 /*
@@ -84,7 +83,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   }
 
   private val client : Option[MemcachedClientIF] = createMemcachedClient(memcachedHosts)
-  @volatile private var isEnabled : Boolean = client.isDefined
+  private val isEnabled : Boolean = client.isDefined
   private val memcached : MemcachedClientIF = if(isEnabled) { client.get } else { null }
 
 
@@ -332,7 +331,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       }
       else {
         logCacheHit(keyString,MemcachedCache.CACHE_TYPE_VALUE_CALCULATION)
-        Some(getFromStaleDistributedCache(keyString,future,null))
+        Some(getFutueForStaleDistributedCacheLookup(keyString,future,null))
       }
     }
   }
@@ -385,7 +384,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
             cacheWriteFunction(genValue(), promise, keyString, staleCacheKey, itemExpiry,staleCacheExpiry , ec)
           } else {
             if(useStaleCache) {
-              getFromStaleDistributedCache(staleCacheKey,alreadyStoredFuture,ec)
+              getFutueForStaleDistributedCacheLookup(staleCacheKey,alreadyStoredFuture,ec)
             } else {
               alreadyStoredFuture
             }
@@ -394,7 +393,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       }
       else  {
         if(useStaleCache) {
-          getFromStaleDistributedCache(staleCacheKey,existingFuture,ec)
+          getFutueForStaleDistributedCacheLookup(staleCacheKey,existingFuture,ec)
         } else {
           logCacheHit(keyString,MemcachedCache.CACHE_TYPE_VALUE_CALCULATION)
           existingFuture
@@ -407,6 +406,14 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     staleCachePrefix + key
   }
 
+  /**
+   * Talks to memcached to find a cached entry. If the entry does not exist, the backend Future will
+   * be 'consulted' and it's value with be returned.
+   *
+   * @param key The cache key to lookup
+   * @param promise the promise on which requests are waiting.
+   * @param backendFuture the future that is running the long returning calculation that creates a fresh entry.
+   */
   private def getFromStaleDistributedCache(key : String,
                                            promise : Promise[Serializable],
                                            backendFuture : Future[Serializable]) : Unit = {
@@ -438,8 +445,17 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     }
   }
 
-  private def getFromStaleDistributedCache(key : String, backendFuture : Future[Serializable],
-                                           ec: ExecutionContext) : Future[Serializable] = {
+  /**
+   * returns a future that is consulting the stale memcached cache.  If the item is not in the
+   * cache, the backendFuture will be invoked (complete the operation).
+   *
+   * @param key The stale cache key
+   * @param backendFuture The future that is actually calculating the fresh cache entry
+   * @param ec  The require execution context to run the stale cache key.
+   * @return  A future that will result in the stored Serializable object
+   */
+  private def getFutueForStaleDistributedCacheLookup(key : String, backendFuture : Future[Serializable],
+                                                     ec: ExecutionContext) : Future[Serializable] = {
 
     // protection against thundering herd on stale memcached
     val existingFuture : Future[Serializable] = staleStore.get(key)
@@ -571,6 +587,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     if ( allowFlush ) {
       try {
         store.clear()
+        staleStore.clear()
         memcached.flush()
       } catch {
         case e : Exception => {
@@ -597,7 +614,6 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       store.clear()
       staleStore.clear()
       memcached.shutdown()
-      isEnabled = false;
     }
 
   }
