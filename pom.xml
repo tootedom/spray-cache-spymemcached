@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.greencheek.spray</groupId>
     <artifactId>spray-cache-spymemcached</artifactId>
-    <version>0.1.24-SNAPSHOT</version>
+    <version>0.1.24</version>
     <packaging>jar</packaging>
     <name>Spray Spy Memcached Cache Implementation</name>
     <description>Spy Memcached Backend for the Spray Cache API</description>
@@ -57,7 +57,7 @@
         <connection>scm:git:git@github.com:tootedom/spray-cache-spymemcached.git</connection>
         <url>scm:git:git@github.com:tootedom/spray-cache-spymemcached.git</url>
         <developerConnection>scm:git:git@github.com:tootedom/spray-cache-spymemcached.git</developerConnection>
-        <tag>spray-cache-spymemcached-0.1.11</tag>
+        <tag>spray-cache-spymemcached-0.1.24</tag>
     </scm>
     <repositories>
         <repository>
