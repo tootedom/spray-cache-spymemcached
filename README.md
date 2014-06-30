@@ -54,7 +54,7 @@ The library is availble in maven central, and the dependency is as follows:
     <dependency>
       <groupId>org.greencheek.spray</groupId>
       <artifactId>spray-cache-spymemcached</artifactId>
-      <version>0.1.19</version>
+      <version>0.1.24</version>
     </dependency>
 
 The library was build using scala 2.10.x.  It has not be tested with scala 2.9.x.  Therefore, consider it only compatible
@@ -134,6 +134,19 @@ the memcached cached requesting this.  The follow will wait for the memcached se
     new MemcachedCache[String](maxCapacity = 500,
                                waitForMemcachedSet = true,
                                setWaitDuration = Duration(1,TimeUnit.SECONDS))
+                               
+Note the thundering herd protection is just for the value's calculation, and not that of lookups against memcached.  I.e.
+when a value is not currently being calculated, the value could be in the distributed cache (i.e. it is cached).  
+There is no explicit protection against a thundering herd looking up the same cached key/value pair in the memcached.  
+The spymemcached library does have inbuilt request collapsing, such that in sequenece requests for the same key will only 
+result in one call to memcached.  As a result no future's based protection has been implemented for memcached gets.
+
+
+## Stale Caching ##
+
+This is available as of version `0.1.23`.  
+
+
 
 ----
 
@@ -637,4 +650,4 @@ The Fast Serialization, which is the default, can be explicitly set as follows:
     val cache: Cache[ProductCase] = new MemcachedCache[ProductCase](memcachedHosts = "host1:11211,host2:11211,host3:11211",
                                                           protocol = Protocol.TEXT, keyHashType = XXJavaHash,
                                                           memcachedGetTimeout = Duration(1,TimeUnit.SECONDS),
-                                                          serializingTranscoder = new FastSerializingTranscoder())
+                                                          serializingTranscoder = new FastSerializingTranscoder())                                                                                                                    

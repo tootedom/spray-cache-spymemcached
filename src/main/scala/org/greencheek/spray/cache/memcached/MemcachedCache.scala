@@ -69,7 +69,8 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
                                    val staleCacheAdditionalTimeToLive : Duration = Duration.MinusInf,
                                    val staleCachePrefix  : String = "stale",
                                    val staleMaxCapacity : Int = -1,
-                                   val staleCacheMemachedGetTimeout : Duration = Duration.MinusInf)
+                                   val staleCacheMemachedGetTimeout : Duration = Duration.MinusInf,
+                                   val memcachedGetHerdProtectionMaxCapacity : Int = -1)
   extends Cache[Serializable] {
 
   private val hashKeyPrefix = keyPrefix match {
@@ -103,6 +104,14 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   private[cache] val staleStore = new ConcurrentLinkedHashMap.Builder[String, Future[Serializable]]
     .initialCapacity(staleMaxCapacityValue)
     .maximumWeightedCapacity(staleMaxCapacityValue)
+    .build()
+
+  private val memcachedGetHerdProtectionMaxCapacityValue : Int = if (memcachedGetHerdProtectionMaxCapacity == -1) maxCapacity else memcachedGetHerdProtectionMaxCapacity
+
+
+  private[cache] val herdGetStore = new ConcurrentLinkedHashMap.Builder[String, Future[Serializable]]
+    .initialCapacity(memcachedGetHerdProtectionMaxCapacityValue)
+    .maximumWeightedCapacity(memcachedGetHerdProtectionMaxCapacityValue)
     .build()
 
   private val keyHashingFunction : KeyHashing = keyHashType match {
@@ -327,7 +336,12 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     } else {
       val future : Future[Serializable] = store.get(keyString)
       if(future==null) {
+        val getProtectuFuture :  Future[Serializable]  = herdGetStore.get(keyString)
+        if(getProtectuFuture==null) {
           getFromDistributedCache(keyString)
+        } else {
+          Some(getProtectuFuture)
+        }
       }
       else {
         logCacheHit(keyString,MemcachedCache.CACHE_TYPE_VALUE_CALCULATION)
@@ -375,20 +389,42 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       val existingFuture : Future[Serializable] = store.get(keyString)
       if(existingFuture==null) {
         // check memcached.
-        getFromDistributedCache(keyString).getOrElse {
-          // create and store a new future for the to be generated value
-          val promise = Promise[Serializable]()
-          val alreadyStoredFuture : Future[Serializable] = store.putIfAbsent(keyString, promise.future)
-          if(alreadyStoredFuture == null) {
-            logger.debug("set requested for {}", keyString)
-            cacheWriteFunction(genValue(), promise, keyString, staleCacheKey, itemExpiry,staleCacheExpiry , ec)
-          } else {
-            if(useStaleCache) {
-              getFutueForStaleDistributedCacheLookup(staleCacheKey,alreadyStoredFuture,ec)
-            } else {
-              alreadyStoredFuture
+        val getHerdStoreFuture : Future[Serializable] = herdGetStore.get(keyString)
+        if(getHerdStoreFuture == null) {
+          val getPromise = Promise[Serializable]()
+
+          val alreadyStoredGetHerdFuture = herdGetStore.putIfAbsent(keyString,getPromise.future)
+
+          if(alreadyStoredGetHerdFuture==null) {
+            Future {
+              val future : Future[Serializable] = getFromDistributedCache(keyString).getOrElse {
+                // create and store a new future for the to be generated value
+                val promise = Promise[Serializable]()
+                val alreadyStoredFuture: Future[Serializable] = store.putIfAbsent(keyString, promise.future)
+                if (alreadyStoredFuture == null) {
+                  logger.debug("set requested for {}", keyString)
+                  cacheWriteFunction(genValue(), promise, keyString, staleCacheKey, itemExpiry, staleCacheExpiry, ec)
+                } else {
+                  if (useStaleCache) {
+                    getFutueForStaleDistributedCacheLookup(staleCacheKey, alreadyStoredFuture, ec)
+                  } else {
+                    alreadyStoredFuture
+                  }
+                }
+              }
+              future
+            }.onComplete { value =>
+              herdGetStore.remove(keyString,getPromise.future)
+              getPromise.completeWith(value.get)
             }
+            getPromise.future
           }
+          else {
+            alreadyStoredGetHerdFuture
+          }
+        }
+        else {
+          getHerdStoreFuture
         }
       }
       else  {
