@@ -8,7 +8,7 @@
     <description>Spy Memcached Backend for the Spray Cache API</description>
     <url>https://github.com/tootedom/spray-cache-spymemcached</url>
     <properties>
-        <spy.version>2.11.3</spy.version>
+        <spy.version>2.11.4</spy.version>
         <jsr666e.version>1.1.0</jsr666e.version>
         <slf4j.version>1.7.6</slf4j.version>
         <memcachedtest.version>1.0.0</memcachedtest.version>

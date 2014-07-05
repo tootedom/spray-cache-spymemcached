@@ -180,6 +180,50 @@ abstract class MemcachedCacheSpec extends Specification {
 
 
     }
+    "clear cache" in memcachedContext {
+      val cache = memcachedCache[String](getMemcachedHostsString.getOrElse("localhost:"+memcachedContext.memcached.port),binary = memcachedContext.binary,
+        timeToLive = Duration(1,SECONDS))
+
+      cache(15678)("A").await === "A"
+      cache(25678)("B").await === "B"
+      cache(35678)("C").await === "C"
+      Thread.sleep(2000)
+      cache(25678)("F").await === "F"
+
+      cache.clear()
+
+      cache.get(15678) must beNone // removed on request
+      cache.get(25678) must beNone // removed on request
+      cache.get(35678) must beNone // but not retrievable anymore
+
+    }
+    "close cache" in memcachedContext {
+      val cache = memcachedCache[String](getMemcachedHostsString.getOrElse("localhost:"+memcachedContext.memcached.port),binary = memcachedContext.binary,
+        timeToLive = Duration(1,SECONDS))
+
+      cache(15678)("A").await === "A"
+      cache(25678)("B").await === "B"
+      cache(35678)("C").await === "C"
+      Thread.sleep(2000)
+      cache(25678)("F").await === "F"
+
+      cache.close()
+
+      cache.get(15678) must beNone // removed on request
+      cache.get(25678) must beNone // removed on request
+      cache.get(35678) must beNone // but not retrievable anymore
+
+      val f1 = cache(12345)( Future {
+        Thread.sleep(1000)
+        "A"
+      })
+
+      f1.await === "A"
+
+      cache.get(12345) must beNone
+
+
+    }
     "provide a key prefix" in memcachedContext {
       val cacheWithPrefixA = memcachedCache[String](getMemcachedHostsString.getOrElse("localhost:"+memcachedContext.memcached.port),binary = memcachedContext.binary,
         timeToLive = Duration(10,SECONDS),keyPrefix = Some("A"))

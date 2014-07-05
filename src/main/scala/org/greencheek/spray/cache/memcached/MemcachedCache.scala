@@ -100,10 +100,15 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
   private val staleMaxCapacityValue : Int = if (staleMaxCapacity == -1) maxCapacity else staleMaxCapacityValue
   private val staleCacheAdditionalTimeToLiveValue : Duration = if (staleCacheAdditionalTimeToLive == Duration.MinusInf) timeToLive else staleCacheAdditionalTimeToLive
 
-  private[cache] val staleStore = new ConcurrentLinkedHashMap.Builder[String, Future[Serializable]]
-    .initialCapacity(staleMaxCapacityValue)
-    .maximumWeightedCapacity(staleMaxCapacityValue)
-    .build()
+  private[cache] val staleStore = useStaleCache match {
+    case true => {
+      new ConcurrentLinkedHashMap.Builder[String, Future[Serializable]]
+        .initialCapacity(staleMaxCapacityValue)
+        .maximumWeightedCapacity(staleMaxCapacityValue)
+        .build()
+    }
+    case false => null
+  }
 
   private val keyHashingFunction : KeyHashing = keyHashType match {
     case MD5KeyHash | MD5UpperKeyHash => createMd5KeyHasher(asciiOnlyKeys,true)
@@ -250,31 +255,51 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     cacheHitMissLogger.debug("{ \"cachemiss\" : \"{}\", \"cachetype\" : \"{}\"}",key,cacheType)
   }
 
-  private def getFromDistributedCache(key: String): Option[Future[Serializable]] = {
+  /**
+   * Obtains a item from the distributed cache.
+   *
+   * @param key The key under which to find a cached object.
+   * @return The cached object
+   */
+  private def getFromDistributedCache(key: String): Serializable = {
+    var serialisedObj : Object = null
     try {
         val future =  memcached.asyncGet(key)
         val cacheVal = future.get(memcachedGetTimeoutMillis,TimeUnit.MILLISECONDS)
         if(cacheVal==null){
             logCacheMiss(key,MemcachedCache.CACHE_TYPE_DISTRIBUTED_CACHE)
-            None
         } else {
             logCacheHit(key,MemcachedCache.CACHE_TYPE_DISTRIBUTED_CACHE)
-            Some(Future.successful(cacheVal.asInstanceOf[Serializable]))
+            serialisedObj = cacheVal
         }
     } catch {
       case e @ (_ : OperationTimeoutException | _ :  CheckedOperationTimeoutException | _ : TimeoutException) => {
-        logger.error("timeout when retrieving key {} from memcached",key)
-        None
+        logger.warn("timeout when retrieving key {} from memcached",key)
       }
       case e: Exception => {
-        logger.error("Unable to contact memcached", e)
-        None
+        logWarn("Unable to contact memcached for get({}): {}",key, e.getMessage)
       }
       case e: Throwable => {
-        logger.error("Exception thrown when communicating with memcached", e)
-        None
+        logWarn("Exception thrown when communicating with memcached for get({}): {}",key, e.getMessage)
       }
     }
+
+    serialisedObj.asInstanceOf[Serializable]
+  }
+
+  private def getOptionFromDistributedCache(key: String) : Option[Future[Serializable]] = {
+    val item = getFromDistributedCache(key)
+
+    if(item == null) {
+      None
+    }
+    else {
+      Some(Future.successful(item))
+    }
+  }
+
+  private def logWarn(msg : String, item1 : Any, item2 : Any) : Unit = {
+    logger.warn(msg,item1,item2)
   }
 
   private def getDuration(timeToLive : Duration) : Long = {
@@ -327,11 +352,15 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     } else {
       val future : Future[Serializable] = store.get(keyString)
       if(future==null) {
-          getFromDistributedCache(keyString)
+        getOptionFromDistributedCache(keyString)
       }
       else {
         logCacheHit(keyString,MemcachedCache.CACHE_TYPE_VALUE_CALCULATION)
-        Some(getFutueForStaleDistributedCacheLookup(keyString,future,null))
+        if(useStaleCache) {
+          Some(getFutueForStaleDistributedCacheLookup(keyString, future, null))
+        } else {
+          Some(future)
+        }
       }
     }
   }
@@ -375,7 +404,9 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       val existingFuture : Future[Serializable] = store.get(keyString)
       if(existingFuture==null) {
         // check memcached.
-        getFromDistributedCache(keyString).getOrElse {
+        val cachedObject = getFromDistributedCache(keyString)
+        if(cachedObject == null)
+        {
           // create and store a new future for the to be generated value
           val promise = Promise[Serializable]()
           val alreadyStoredFuture : Future[Serializable] = store.putIfAbsent(keyString, promise.future)
@@ -389,6 +420,9 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
               alreadyStoredFuture
             }
           }
+        }
+        else {
+          Future.successful(cachedObject)
         }
       }
       else  {
@@ -429,15 +463,15 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
       }
     } catch {
       case e @ (_ : OperationTimeoutException | _ :  CheckedOperationTimeoutException | _ : TimeoutException) => {
-        logger.error("timeout when retrieving key {} from memcached", key)
+        logger.warn("timeout when retrieving key {} from memcached", key)
         promise.completeWith(backendFuture)
       }
       case e: Exception => {
-        logger.error("Unable to contact memcached", e)
+        logWarn("Unable to contact memcached for get({}): {}", key, e.getMessage)
         promise.completeWith(backendFuture)
       }
       case e: Throwable => {
-        logger.error("Exception thrown when communicating with memcached", e)
+        logWarn("Exception thrown when communicating with memcached for get({}): {}",key, e.getMessage)
         promise.completeWith(backendFuture)
       }
     } finally {
@@ -532,7 +566,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
     promise.future
   }
 
-  def remove(key: Any) = {
+  def remove(key: Any) : Option[Future[Serializable]] = {
     if(!isEnabled) {
       None
     }
@@ -543,51 +577,61 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
         case x => Some(x)
       }
 
-      val memcachedRemovedFuture = getFromDistributedCache(keyString) match {
-        case None => {
-          None
-        }
-        case future => {
-          try {
-            if(useStaleCache) memcached.delete(createStaleCacheKey(keyString))
+      val memcachedRemovedFuture = getFromDistributedCache(keyString)
 
-            if(waitForMemcachedRemove) {
-              val futureRemove = memcached.delete(keyString)
-              try {
-                futureRemove.get(removeWaitDuration.toMillis, TimeUnit.MILLISECONDS)
-              } catch {
-                case e: Exception => {
-                  logger.warn("Exception waiting for memcached remove to occur")
-                }
-              }
-            } else {
-              memcached.delete(keyString)
-            }
-          } catch {
-            case e: Exception => {
-              logger.error("exception removing item {} from memcached", keyString)
-            }
+      if(memcachedRemovedFuture == null) {
+        None
+      }
+      else {
+        try {
+          if (useStaleCache) {
+            memcached.delete(createStaleCacheKey(keyString))
           }
-          future
-        }
-      }
 
-      removedFuture match {
-        case None => {
-          memcachedRemovedFuture
+          if (waitForMemcachedRemove) {
+            val futureRemove = memcached.delete(keyString)
+            try {
+              futureRemove.get(removeWaitDuration.toMillis, TimeUnit.MILLISECONDS)
+            } catch {
+              case e: Exception => {
+                logger.warn("Exception waiting for memcached remove to occur")
+              }
+            }
+          } else {
+            memcached.delete(keyString)
+          }
+        } catch {
+          case e: Exception => {
+            logger.error("exception removing item {} from memcached", keyString)
+          }
         }
-        case Some(_) => {
-          removedFuture
+
+
+
+
+        removedFuture match {
+          case None => {
+            Some(Future.successful(memcachedRemovedFuture))
+          }
+          case Some(_) => {
+            removedFuture
+          }
         }
       }
+    }
+  }
+
+  private def clearInternalCaches() : Unit = {
+    store.clear()
+    if(useStaleCache) {
+      staleStore.clear()
     }
   }
 
   def clear(): Unit = {
     if ( allowFlush ) {
       try {
-        store.clear()
-        staleStore.clear()
+        clearInternalCaches()
         memcached.flush()
       } catch {
         case e : Exception => {
@@ -611,8 +655,7 @@ class MemcachedCache[Serializable](val timeToLive: Duration = MemcachedCache.DEF
 
   def close()= {
     if(isEnabled) {
-      store.clear()
-      staleStore.clear()
+      clearInternalCaches()
       memcached.shutdown()
     }
 
