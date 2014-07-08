@@ -250,14 +250,16 @@ abstract class MemcachedCacheSpec extends Specification {
                         timeToLive: Duration = Duration.Zero, timeToIdle: Duration = Duration.Zero,
                         binary : Boolean = true, waitForMemcachedSet : Boolean = false,
                         allowFlush : Boolean = true, waitForMemcachedRemove : Boolean = false, keyPrefix : Option[String]= None,
-                        keyHashType : KeyHashType = NoKeyHash, hashAlgo : HashAlgorithm = MemcachedCache.DEFAULT_ALGORITHM ) = {
+                        keyHashType : KeyHashType = NoKeyHash, hashAlgo : HashAlgorithm = MemcachedCache.DEFAULT_ALGORITHM,
+                        staleCacheEnabled : Boolean = false) = {
     binary match {
       case true => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.BINARY,
         waitForMemcachedSet = waitForMemcachedSet, allowFlush = allowFlush, waitForMemcachedRemove = waitForMemcachedRemove,
-        removeWaitDuration = Duration(4,TimeUnit.SECONDS), keyPrefix = keyPrefix, keyHashType = keyHashType, hashAlgorithm = hashAlgo)
+        removeWaitDuration = Duration(4,TimeUnit.SECONDS), keyPrefix = keyPrefix, keyHashType = keyHashType, hashAlgorithm = hashAlgo,
+        useStaleCache = staleCacheEnabled)
       case false => new MemcachedCache[T] (timeToLive, maxCapacity, hosts, protocol = Protocol.TEXT,
         waitForMemcachedSet = waitForMemcachedSet,allowFlush = allowFlush, waitForMemcachedRemove = waitForMemcachedRemove,
-        removeWaitDuration = Duration(4,TimeUnit.SECONDS), keyPrefix = keyPrefix)
+        removeWaitDuration = Duration(4,TimeUnit.SECONDS), keyPrefix = keyPrefix, useStaleCache = staleCacheEnabled)
     }
   }
 

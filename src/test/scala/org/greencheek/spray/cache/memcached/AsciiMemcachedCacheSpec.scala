@@ -80,4 +80,34 @@ class AsciiMemcachedCacheSpec extends MemcachedCacheSpec{
 
     true
   }
+  "be thread-safe in xxjavahashing with xx java hash algo and stale caching" in memcachedContext {
+    val cache = memcachedCache[Int]("127.0.0.1:"+memcachedContext.memcached.port, maxCapacity = 1000,binary = memcachedContext.binary,
+      waitForMemcachedSet = true, keyHashType = XXJavaHash, hashAlgo = MemcachedCache.XXHASH_ALGORITHM, staleCacheEnabled = true)
+
+    // exercise the cache from 10 parallel "tracks" (threads)
+    val views = Future.traverse(Seq.tabulate(10)(identityFunc)) { track =>
+      Future {
+        val array = Array.fill(1000)(0) // our view of the cache
+        val rand = new Random(track)
+        (1 to 10000) foreach { i =>
+          val ix = rand.nextInt(1000)            // for a random index into the cache
+        val value = cache(ix) {                // get (and maybe set) the cache value
+            Thread.sleep(0)
+            rand.nextInt(1000000) + 1
+          }.await
+          if (array(ix) == 0) array(ix) = value  // update our view of the cache
+          else if (array(ix) != value) failure("Cache view is inconsistent (track " + track + ", iteration " + i +
+            ", index " + ix + ": expected " + array(ix) + " but is " + value)
+        }
+        array
+      }
+    }.await
+    val beConsistent: Matcher[Seq[Int]] = (
+      (ints: Seq[Int]) => ints.filter(_ != 0).reduceLeft((a, b) => if (a == b) a else 0) != 0,
+      (_: Seq[Int]) => "consistency check"
+      )
+    views.transpose must beConsistent.forall
+
+    true
+  }
 }
