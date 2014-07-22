@@ -12,7 +12,6 @@ import org.slf4j.{Logger, LoggerFactory}
 object AddressByNameHostResolver extends HostResolver {
   private val logger : Logger = LoggerFactory.getLogger(classOf[HostResolver])
 
-
   override def returnSocketAddressesForHostNames(nodes: List[(String, Int)], dnsLookupTimeout: Duration): List[InetSocketAddress] = {
     val addressLookupService = LookupService.create()
 
@@ -55,4 +54,6 @@ object AddressByNameHostResolver extends HostResolver {
 
     workingNodes
   }
+
+
 }

@@ -1,8 +1,6 @@
 package org.greencheek.spray.cache.memcached.clientbuilder.elasticache
 
 import net.spy.memcached.{ConnectionFactory, MemcachedClientIF}
-import org.greencheek.elasticacheconfig.confighandler.AsyncConfigInfoMessageHandler
-import org.greencheek.elasticacheconfig.handler.RequestConfigInfoScheduler
 import org.greencheek.spray.cache.memcached.clientbuilder.ClientFactory
 
 import scala.concurrent.duration.Duration
@@ -18,6 +16,7 @@ class ElasticacheClientFactory(
                                 idleReadTimeout: Duration,
                                 reconnectDelay: Duration,
                                 numberOfInvalidConfigsBeforeReconnect: Int
+
                                 ) extends ClientFactory {
 
 
