@@ -1,6 +1,5 @@
 package org.greencheek.spray.cache.memcached.clientbuilder.elasticache.configparsing
 
-import org.greencheek.spray.cache.memcached.MemcachedCache
 import org.greencheek.spray.cache.memcached.clientbuilder.elasticache.ElastiCacheHost
 import org.slf4j.{LoggerFactory, Logger}
 
@@ -9,9 +8,9 @@ import scala.collection.mutable.ArrayBuffer
 /**
  * Created by dominictootell on 22/07/2014.
  */
-object DefaultElasticacheConfigParser extends ElasticacheConfigParser {
+object DefaultElastiCacheConfigParser extends ElastiCacheConfigParser {
 
-  private val logger : Logger = LoggerFactory.getLogger(classOf[ElasticacheConfigParser])
+  private val logger : Logger = LoggerFactory.getLogger(classOf[ElastiCacheConfigParser])
 
 
   def parseServers(serversString : String ): Seq[ElastiCacheHost] = {

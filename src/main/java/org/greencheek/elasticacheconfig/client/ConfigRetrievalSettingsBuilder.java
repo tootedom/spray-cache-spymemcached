@@ -61,6 +61,11 @@ public class ConfigRetrievalSettingsBuilder {
         return this;
     }
 
+    public ConfigRetrievalSettingsBuilder setElasticacheConfigServer(String elasticacheHost, int elasticachePort) {
+        this.elasticacheHost = elasticacheHost;
+        this.elasticachePort = elasticachePort;
+        return this;
+    }
 
     public ConfigRetrievalSettingsBuilder setIdleReadTimeout(long idleReadTimeout,TimeUnit idleTimeoutTimeUnit) {
         this.idleReadTimeout = idleReadTimeout;
@@ -74,13 +79,9 @@ public class ConfigRetrievalSettingsBuilder {
     }
 
 
-    public ConfigRetrievalSettingsBuilder setConfigPollingTime(long configPollingTime,TimeUnit configPollingTimeUnit) {
+    public ConfigRetrievalSettingsBuilder setConfigPollingTime(long configPollingInitialDelay, long configPollingTime,TimeUnit configPollingTimeUnit) {
         this.configPollingTime = configPollingTime;
         this.configPollingTimeUnit = configPollingTimeUnit;
-        return this;
-    }
-
-    public ConfigRetrievalSettingsBuilder setConfigPollingInitialDelay(long configPollingInitialDelay) {
         this.configPollingInitialDelay = configPollingInitialDelay;
         return this;
     }

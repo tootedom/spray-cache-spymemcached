@@ -4,24 +4,18 @@ import org.greencheek.spray.cache.memcached.clientbuilder.ClientFactory
 import org.greencheek.spray.cache.memcached.clientbuilder.staticclient.SpyMemcachedClientFactory
 import org.greencheek.spray.cache.memcached.spyconnectionfactory.SpyConnectionFactoryBuilder
 import spray.caching.Cache
-import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap
-import scala.concurrent.{Promise, ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import net.spy.memcached._
-import java.net.InetSocketAddress
-import org.slf4j.{LoggerFactory, Logger}
-import java.util.concurrent.{TimeoutException, TimeUnit}
+import java.util.concurrent.TimeUnit
 import net.spy.memcached.ConnectionFactoryBuilder.{Protocol, Locator}
 import net.spy.memcached.transcoders.Transcoder
 import org.greencheek.spy.extensions.FastSerializingTranscoder
-import scala.collection.JavaConversions._
 import org.greencheek.spray.cache.memcached.keyhashing._
-import org.greencheek.spy.extensions.connection.CustomConnectionFactoryBuilder
-import org.greencheek.spy.extensions.hashing.{JenkinsHash => JenkinsHashAlgo, AsciiXXHashAlogrithm, XXHashAlogrithm}
+import org.greencheek.spy.extensions.hashing.{JenkinsHash => JenkinsHashAlgo, XXHashAlogrithm}
 import org.greencheek.spray.cache.memcached.hostparsing.{CommaSeparatedHostAndPortStringParser, HostStringParser}
 import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.{AddressByNameHostResolver, HostResolver}
 import org.greencheek.spray.cache.memcached.hostparsing.connectionchecking.{TCPHostValidation, HostValidation}
-import net.spy.memcached.internal.CheckedOperationTimeoutException
 
 /*
  * Created by dominictootell on 26/03/2014.

@@ -57,7 +57,7 @@ public class SlowPeriodicConfigRetrievalClientTest {
         };
 
         builder.setConfigInfoProcessor(processor);
-        builder.setConfigPollingTime(5, TimeUnit.SECONDS);
+        builder.setConfigPollingTime(0,5, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(70,TimeUnit.SECONDS);
         builder.setElasticacheHost("localhost");
         builder.setElasticachePort(server.getPort());
@@ -99,7 +99,7 @@ public class SlowPeriodicConfigRetrievalClientTest {
         };
 
         builder.setConfigInfoProcessor(processor);
-        builder.setConfigPollingTime(10, TimeUnit.SECONDS);
+        builder.setConfigPollingTime(0,10, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(70,TimeUnit.SECONDS);
         builder.setElasticacheHost("localhost");
         builder.setElasticachePort(server.getPort());

@@ -54,7 +54,7 @@ public class SlowStartupPeriodicConfigRetrievalClientTest {
         };
 
         builder.setConfigInfoProcessor(processor);
-        builder.setConfigPollingTime(5, TimeUnit.SECONDS);
+        builder.setConfigPollingTime(0,5, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(70,TimeUnit.SECONDS);
         builder.setElasticacheHost("localhost");
         builder.setElasticachePort(server.getPort());

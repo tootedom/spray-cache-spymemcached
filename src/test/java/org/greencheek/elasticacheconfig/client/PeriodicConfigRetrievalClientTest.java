@@ -52,7 +52,7 @@ public class PeriodicConfigRetrievalClientTest {
         };
 
         builder.setConfigInfoProcessor(processor);
-        builder.setConfigPollingTime(5, TimeUnit.SECONDS);
+        builder.setConfigPollingTime(0,5, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(70,TimeUnit.SECONDS);
         builder.setElasticacheHost("localhost");
         builder.setElasticachePort(server.getPort());
@@ -92,7 +92,7 @@ public class PeriodicConfigRetrievalClientTest {
         };
 
         builder.setConfigInfoProcessor(processor);
-        builder.setConfigPollingTime(5, TimeUnit.SECONDS);
+        builder.setConfigPollingTime(0,5, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(70,TimeUnit.SECONDS);
         builder.setElasticacheHost("localhost");
         builder.setElasticachePort(server.getPort());
@@ -156,7 +156,7 @@ public class PeriodicConfigRetrievalClientTest {
         };
 
         builder.setConfigInfoProcessor(processor);
-        builder.setConfigPollingTime(2, TimeUnit.SECONDS);
+        builder.setConfigPollingTime(0,2, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(70,TimeUnit.SECONDS);
         builder.setElasticacheHost("localhost");
         builder.setElasticachePort(server.getPort());
@@ -208,7 +208,7 @@ public class PeriodicConfigRetrievalClientTest {
         };
 
         builder.setConfigInfoProcessor(processor);
-        builder.setConfigPollingTime(1, TimeUnit.SECONDS);
+        builder.setConfigPollingTime(0,1, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(70,TimeUnit.SECONDS);
         builder.setElasticacheHost("localhost");
         builder.setElasticachePort(server.getPort());
@@ -255,7 +255,7 @@ public class PeriodicConfigRetrievalClientTest {
         };
 
         builder.setConfigInfoProcessor(processor);
-        builder.setConfigPollingTime(20, TimeUnit.SECONDS);
+        builder.setConfigPollingTime(0,20, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(10,TimeUnit.SECONDS);
         builder.setElasticacheHost("localhost");
         builder.setElasticachePort(server.getPort());

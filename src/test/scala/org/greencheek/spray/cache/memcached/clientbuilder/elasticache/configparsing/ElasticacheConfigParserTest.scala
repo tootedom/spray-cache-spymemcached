@@ -6,12 +6,12 @@ import org.specs2.mutable.Specification
 /**
  * Created by dominictootell on 22/07/2014.
  */
-class ElasticacheConfigParserTest extends Specification {
+class ElastiCacheConfigParserTest extends Specification {
 
   "Given two host, with ips, they should both be parsed" in {
     val exampleHosts : String = "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211\n\r\n";
 
-    val hosts : Seq[ElastiCacheHost] =  DefaultElasticacheConfigParser.parseServers(exampleHosts)
+    val hosts : Seq[ElastiCacheHost] =  DefaultElastiCacheConfigParser.parseServers(exampleHosts)
 
     hosts.size should be equalTo(2)
     hosts(0).hasIP should beTrue
@@ -31,7 +31,7 @@ class ElasticacheConfigParserTest extends Specification {
   "Given two host, one with an ip, they should both be parsed" in {
     val exampleHosts : String = "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com||11212\n\r\n";
 
-    val hosts : Seq[ElastiCacheHost] =  DefaultElasticacheConfigParser.parseServers(exampleHosts)
+    val hosts : Seq[ElastiCacheHost] =  DefaultElastiCacheConfigParser.parseServers(exampleHosts)
 
     hosts.size should be equalTo(2)
     hosts(0).hasIP should beTrue
@@ -50,7 +50,7 @@ class ElasticacheConfigParserTest extends Specification {
   "Given two host, one no ips, they should both be parsed" in {
     val exampleHosts : String = "myCluster.pc4ldq.0001.use1.cache.amazonaws.com\r\n||11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com||11212\n\r\n";
 
-    val hosts : Seq[ElastiCacheHost] =  DefaultElasticacheConfigParser.parseServers(exampleHosts)
+    val hosts : Seq[ElastiCacheHost] =  DefaultElastiCacheConfigParser.parseServers(exampleHosts)
 
     hosts.size should be equalTo(2)
     hosts(0).hasIP should beFalse
@@ -69,7 +69,7 @@ class ElasticacheConfigParserTest extends Specification {
   "Given 5 hosts they should all be parsed" in {
     val exampleHosts : String = "myCluster.pc4ldq.0001.use1.cache.amazonaws.com\r\n||11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com||11212\n\r\n myCluster.pc4ldq.0001.use1.cache.amazonaws.com\r\n||11211 myCluster.pc4ldq.0001.use1.cache.amazonaws.com\r\n||11211 myCluster.pc4ldq.0001.use1.cache.amazonaws.com\r\n||11211 ";
 
-    val hosts : Seq[ElastiCacheHost] =  DefaultElasticacheConfigParser.parseServers(exampleHosts)
+    val hosts : Seq[ElastiCacheHost] =  DefaultElastiCacheConfigParser.parseServers(exampleHosts)
 
     hosts.size should be equalTo(5)
     hosts(0).hasIP should beFalse

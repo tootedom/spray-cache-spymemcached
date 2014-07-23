@@ -5,6 +5,6 @@ import org.greencheek.spray.cache.memcached.clientbuilder.elasticache.ElastiCach
 /**
  * Created by dominictootell on 22/07/2014.
  */
-trait ElasticacheConfigParser {
+trait ElastiCacheConfigParser {
   def parseServers(serversString : String ): Seq[ElastiCacheHost]
 }
