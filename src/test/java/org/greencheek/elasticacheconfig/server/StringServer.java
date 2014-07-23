@@ -105,8 +105,10 @@ public final class StringServer implements TestRule {
                         }
                     });
 
+
             // Start the server.
             if(startDelay>0) {
+                port = getPortNoClose(socket);
                 workerGroup.schedule(new Runnable() {
                     @Override
                     public void run() {
@@ -159,6 +161,10 @@ public final class StringServer implements TestRule {
         ServerSocket server = new ServerSocket(0,1, InetAddress.getLoopbackAddress());
         server.setReuseAddress(true);
         return server;
+    }
+
+    private int getPortNoClose(ServerSocket server) {
+        return server.getLocalPort();
     }
 
     private int getPort(ServerSocket server) {

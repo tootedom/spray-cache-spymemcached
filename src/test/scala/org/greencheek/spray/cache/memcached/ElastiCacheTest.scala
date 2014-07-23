@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
 import org.greencheek.elasticacheconfig.server.StringServer
+import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.AddressByNameHostResolver
 import org.greencheek.util.memcached.{WithMemcached, MemcachedBasedSpec}
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
@@ -66,6 +67,9 @@ class ElastiCacheTest extends MemcachedBasedSpec {
           configPollingTimeUnit = TimeUnit.SECONDS,
           protocol = Protocol.TEXT,
           waitForMemcachedSet = true,
+          delayBeforeClientClose = Duration(1,TimeUnit.SECONDS),
+          dnsLookupService= AddressByNameHostResolver,
+          dnsLookupTimeout = Duration(2,TimeUnit.SECONDS),
           useStaleCache = true, timeToLive = Duration(1, TimeUnit.SECONDS),
           staleCacheAdditionalTimeToLive = Duration(4, TimeUnit.SECONDS))
 
@@ -138,6 +142,9 @@ class ElastiCacheTest extends MemcachedBasedSpec {
           waitForMemcachedSet = true,
           allowFlush = true,
           useStaleCache = true, timeToLive = Duration(1, TimeUnit.SECONDS),
+          delayBeforeClientClose = Duration(1,TimeUnit.SECONDS),
+          dnsLookupService= AddressByNameHostResolver,
+          dnsLookupTimeout = Duration(2,TimeUnit.SECONDS),
           staleCacheAdditionalTimeToLive = Duration(4, TimeUnit.SECONDS))
 
 
