@@ -4,6 +4,8 @@ package org.greencheek.spray.cache.memcached
 import org.greencheek.util.memcached.{WithMemcached, MemcachedBasedSpec}
 import akka.actor.ActorSystem
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
+import org.junit.runner.RunWith
+import org.specs2.runner.JUnitRunner
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 import spray.util._
@@ -13,6 +15,7 @@ import scala.concurrent.duration.Duration
 /**
  * Created by dominictootell on 22/06/2014.
  */
+@RunWith(classOf[JUnitRunner])
 class StaleCacheSpec extends MemcachedBasedSpec {
 
   val largeContent = LargeString.string
