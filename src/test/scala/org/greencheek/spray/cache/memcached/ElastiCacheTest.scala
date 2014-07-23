@@ -68,8 +68,8 @@ class ElastiCacheTest extends MemcachedBasedSpec {
           protocol = Protocol.TEXT,
           waitForMemcachedSet = true,
           delayBeforeClientClose = Duration(1,TimeUnit.SECONDS),
-          dnsLookupService= AddressByNameHostResolver,
-          dnsLookupTimeout = Duration(2,TimeUnit.SECONDS),
+          hostResolver= AddressByNameHostResolver,
+          dnsConnectionTimeout = Duration(2,TimeUnit.SECONDS),
           useStaleCache = true, timeToLive = Duration(1, TimeUnit.SECONDS),
           staleCacheAdditionalTimeToLive = Duration(4, TimeUnit.SECONDS))
 
@@ -143,8 +143,8 @@ class ElastiCacheTest extends MemcachedBasedSpec {
           allowFlush = true,
           useStaleCache = true, timeToLive = Duration(1, TimeUnit.SECONDS),
           delayBeforeClientClose = Duration(1,TimeUnit.SECONDS),
-          dnsLookupService= AddressByNameHostResolver,
-          dnsLookupTimeout = Duration(2,TimeUnit.SECONDS),
+          hostResolver= AddressByNameHostResolver,
+          dnsConnectionTimeout = Duration(2,TimeUnit.SECONDS),
           staleCacheAdditionalTimeToLive = Duration(4, TimeUnit.SECONDS))
 
 
