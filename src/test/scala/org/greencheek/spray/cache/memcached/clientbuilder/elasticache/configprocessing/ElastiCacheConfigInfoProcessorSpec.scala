@@ -6,12 +6,16 @@ import org.greencheek.elasticacheconfig.confighandler.ConfigInfoProcessor
 import org.greencheek.spray.cache.memcached.clientbuilder.elasticache.ElastiCacheHost
 import org.greencheek.spray.cache.memcached.clientbuilder.elasticache.configparsing.DefaultElastiCacheConfigParser
 import org.greencheek.spray.cache.memcached.clientbuilder.elasticache.connection.{UnavailableReferencedClient, ReferencedClient, UpdateClientService}
+import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.greencheek.elasticacheconfig.domain.ConfigInfo
+import org.specs2.runner.JUnitRunner
+
 /**
  * Created by dominictootell on 23/07/2014.
  */
-class ElastiCacheConfigInfoProcessorTest extends Specification {
+@RunWith(classOf[JUnitRunner])
+class ElastiCacheConfigInfoProcessorSpec extends Specification {
 
   "Test new configuration version results in config change" in {
     val counter = new AtomicInteger(0)
@@ -21,9 +25,11 @@ class ElastiCacheConfigInfoProcessorTest extends Specification {
 
     processor.processConfig(new ConfigInfo("header", 1,"localhost",true))
     processor.processConfig(new ConfigInfo("header", 2,"localhost",true))
+    processor.processConfig(new ConfigInfo("header", 2,"localhost",true))
     processor.processConfig(new ConfigInfo("header", 3,"localhost",false))
     processor.processConfig(new ConfigInfo("header", 4,"localhost",true))
     processor.processConfig(new ConfigInfo("header", 2,"localhost",false))
+    processor.processConfig(new ConfigInfo("header", 2,"localhost",true))
 
     counter.get must beEqualTo(3)
   }

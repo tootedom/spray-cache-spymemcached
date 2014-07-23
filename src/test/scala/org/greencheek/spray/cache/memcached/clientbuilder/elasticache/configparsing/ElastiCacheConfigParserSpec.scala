@@ -1,12 +1,15 @@
 package org.greencheek.spray.cache.memcached.clientbuilder.elasticache.configparsing
 
 import org.greencheek.spray.cache.memcached.clientbuilder.elasticache.ElastiCacheHost
+import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
+import org.specs2.runner.JUnitRunner
 
 /**
  * Created by dominictootell on 22/07/2014.
  */
-class ElastiCacheConfigParserTest extends Specification {
+@RunWith(classOf[JUnitRunner])
+class ElastiCacheConfigParserSpec extends Specification {
 
   "Given two host, with ips, they should both be parsed" in {
     val exampleHosts : String = "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211\n\r\n";
@@ -19,11 +22,11 @@ class ElastiCacheConfigParserTest extends Specification {
 
     hosts(0).hostName must beEqualTo("myCluster.pc4ldq.0001.use1.cache.amazonaws.com")
     hosts(0).ip must beEqualTo("10.82.235.120")
-    hosts(0).port must beEqualTo("11211")
+    hosts(0).port must beEqualTo(11211)
 
     hosts(1).hostName must beEqualTo("myCluster.pc4ldq.0002.use1.cache.amazonaws.com")
     hosts(1).ip must beEqualTo("10.80.249.27")
-    hosts(1).port must beEqualTo("11211")
+    hosts(1).port must beEqualTo(11211)
 
   }
 
@@ -39,11 +42,11 @@ class ElastiCacheConfigParserTest extends Specification {
 
     hosts(0).hostName must beEqualTo("myCluster.pc4ldq.0001.use1.cache.amazonaws.com")
     hosts(0).ip must beEqualTo("10.82.235.120")
-    hosts(0).port must beEqualTo("11211")
+    hosts(0).port must beEqualTo(11211)
 
     hosts(1).hostName must beEqualTo("myCluster.pc4ldq.0002.use1.cache.amazonaws.com")
     hosts(1).ip must beEqualTo("")
-    hosts(1).port must beEqualTo("11212")
+    hosts(1).port must beEqualTo(11212)
 
   }
 
@@ -58,11 +61,11 @@ class ElastiCacheConfigParserTest extends Specification {
 
     hosts(0).hostName must beEqualTo("myCluster.pc4ldq.0001.use1.cache.amazonaws.com")
     hosts(0).ip must beEqualTo("")
-    hosts(0).port must beEqualTo("11211")
+    hosts(0).port must beEqualTo(11211)
 
     hosts(1).hostName must beEqualTo("myCluster.pc4ldq.0002.use1.cache.amazonaws.com")
     hosts(1).ip must beEqualTo("")
-    hosts(1).port must beEqualTo("11212")
+    hosts(1).port must beEqualTo(11212)
 
   }
 
@@ -77,11 +80,11 @@ class ElastiCacheConfigParserTest extends Specification {
 
     hosts(0).hostName must beEqualTo("myCluster.pc4ldq.0001.use1.cache.amazonaws.com")
     hosts(0).ip must beEqualTo("")
-    hosts(0).port must beEqualTo("11211")
+    hosts(0).port must beEqualTo(11211)
 
     hosts(1).hostName must beEqualTo("myCluster.pc4ldq.0002.use1.cache.amazonaws.com")
     hosts(1).ip must beEqualTo("")
-    hosts(1).port must beEqualTo("11212")
+    hosts(1).port must beEqualTo(11212)
 
   }
 }

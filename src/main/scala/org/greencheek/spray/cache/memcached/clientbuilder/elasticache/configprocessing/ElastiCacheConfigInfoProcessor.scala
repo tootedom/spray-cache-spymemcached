@@ -1,7 +1,5 @@
 package org.greencheek.spray.cache.memcached.clientbuilder.elasticache.configprocessing
 
-import java.util.concurrent.atomic.AtomicLong
-
 import org.greencheek.elasticacheconfig.confighandler.ConfigInfoProcessor
 import org.greencheek.elasticacheconfig.domain.ConfigInfo
 import org.greencheek.spray.cache.memcached.MemcachedCache
@@ -27,6 +25,7 @@ class ElastiCacheConfigInfoProcessor(val configParser : ElastiCacheConfigParser,
 
       if(latestConfigVersion>currentVersion) {
         logger.info("Configuration version has increased.  Reconfiguring client")
+        currentConfigVersionNumber = latestConfigVersion
         updateClientService.updateClientConnections(configParser.parseServers(info.getServers))
       }
       else if(latestConfigVersion==currentVersion) {

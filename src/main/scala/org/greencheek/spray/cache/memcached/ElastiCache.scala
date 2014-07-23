@@ -2,7 +2,6 @@ package org.greencheek.spray.cache.memcached
 
 import org.greencheek.spray.cache.memcached.clientbuilder.ClientFactory
 import org.greencheek.spray.cache.memcached.clientbuilder.elasticache.ElastiCacheClientFactory
-import org.greencheek.spray.cache.memcached.clientbuilder.staticclient.SpyMemcachedClientFactory
 import org.greencheek.spray.cache.memcached.spyconnectionfactory.SpyConnectionFactoryBuilder
 import spray.caching.Cache
 import scala.concurrent.{ ExecutionContext, Future}
@@ -13,10 +12,7 @@ import net.spy.memcached.ConnectionFactoryBuilder.{Protocol, Locator}
 import net.spy.memcached.transcoders.Transcoder
 import org.greencheek.spy.extensions.FastSerializingTranscoder
 import org.greencheek.spray.cache.memcached.keyhashing._
-import org.greencheek.spy.extensions.hashing.{JenkinsHash => JenkinsHashAlgo, XXHashAlogrithm}
-import org.greencheek.spray.cache.memcached.hostparsing.{CommaSeparatedHostAndPortStringParser, HostStringParser}
 import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.{AddressByNameHostResolver, HostResolver}
-import org.greencheek.spray.cache.memcached.hostparsing.connectionchecking.{TCPHostValidation, HostValidation}
 /**
  * Created by dominictootell on 23/07/2014.
  */
@@ -124,7 +120,7 @@ class ElastiCache[Serializable](val timeToLive: Duration = MemcachedCache.DEFAUL
     baseMemcachedCached.size
   }
 
-  def close()= {
+  def close() = {
     baseMemcachedCached.close()
 
   }

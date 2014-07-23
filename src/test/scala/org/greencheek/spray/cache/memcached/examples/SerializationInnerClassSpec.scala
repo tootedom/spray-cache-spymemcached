@@ -1,7 +1,9 @@
 package org.greencheek.spray.cache.memcached.examples
 
+import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.greencheek.util.memcached.WithMemcached
+import org.specs2.runner.JUnitRunner
 import spray.caching.Cache
 import org.greencheek.spray.cache.memcached.MemcachedCache
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
@@ -17,6 +19,7 @@ import org.greencheek.spy.extensions.SerializingTranscoder
 /**
  * Created by dominictootell on 09/06/2014.
  */
+@RunWith(classOf[JUnitRunner])
 class SerializationInnerClassSpec extends Specification {
   val memcachedContext = WithMemcached(false)
 

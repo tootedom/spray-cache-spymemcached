@@ -7,14 +7,17 @@ import net.spy.memcached.{MemcachedNode, BroadcastOpFactory, ConnectionFactoryBu
 import org.greencheek.spray.cache.memcached.clientbuilder.elasticache.ElastiCacheHost
 import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.AddressByNameHostResolver
 import org.greencheek.util.memcached.{MemcachedBasedSpec, WithMemcached}
+import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
+import org.specs2.runner.JUnitRunner
 
 import scala.concurrent.duration.Duration
 
 /**
  * Created by dominictootell on 23/07/2014.
  */
-class UpdateReferencedMemcachedClientServiceTest extends MemcachedBasedSpec {
+@RunWith(classOf[JUnitRunner])
+class UpdateReferencedMemcachedClientServiceSpec extends MemcachedBasedSpec {
 
   override def useBinary = false
 

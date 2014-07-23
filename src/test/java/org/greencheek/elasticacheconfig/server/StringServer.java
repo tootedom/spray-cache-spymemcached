@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class StringServer implements TestRule {
 
-    private final String message;
+    private final String[] message;
     private final EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private final EventLoopGroup workerGroup = new NioEventLoopGroup();
 
@@ -58,10 +58,17 @@ public final class StringServer implements TestRule {
     }
 
     public StringServer(String msg, long startDelay, TimeUnit startDelayUnit) {
+        this.message = new String[]{msg};
+        this.startDelay = startDelay;
+        this.startDelayUnit = startDelayUnit;
+    }
+
+    public StringServer(String[] msg, long startDelay, TimeUnit startDelayUnit) {
         this.message = msg;
         this.startDelay = startDelay;
         this.startDelayUnit = startDelayUnit;
     }
+
 
     public int getPort() {
         return port;
@@ -72,7 +79,7 @@ public final class StringServer implements TestRule {
      *
      * @throws if setup fails (which will disable {@code after}
      */
-    protected void before(final String[] message,
+    public void before(final String[] message,
                           final TimeUnit delayUnit,
                           final long delay,
                           boolean sendAllMessages) throws Throwable {
@@ -98,35 +105,54 @@ public final class StringServer implements TestRule {
                         }
                     });
 
-            port = getPort(socket);
             // Start the server.
             if(startDelay>0) {
                 workerGroup.schedule(new Runnable() {
                     @Override
                     public void run() {
                         try {
+                            port = getPort(socket);
                             b.bind(port).sync();
+                            outputStartedMessage();
                         } catch (InterruptedException e) {
 
                         }
                     }
                 },startDelay,startDelayUnit);
             } else {
+                port = getPort(socket);
                 b.bind(port).sync();
+                outputStartedMessage();
             }
+
         } finally {
 
         }
     }
 
+
+    private void outputStartedMessage() {
+        System.out.println("===========");
+        System.out.println("ElastiCache Config Server started on port: " + port);
+        System.out.println("===========");
+        System.out.flush();
+    }
+
+    private void outputShutdownMessage() {
+        System.out.println("===========");
+        System.out.println("ElastiCache Config Server shutdown on port: " + port);
+        System.out.println("===========");
+        System.out.flush();
+    }
     /**
      * Override to tear down your specific external resource.
      */
-    protected void after() {
+    public void after() {
         // do nothing
         // Shut down all event loops to terminate all threads.
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
+        outputShutdownMessage();
     }
 
     private ServerSocket findFreePort() throws IOException {
@@ -155,12 +181,12 @@ public final class StringServer implements TestRule {
         final long delayedFor;
         final String[] messageToSend;
         if(message == null) {
-            messageToSend = new String[]{this.message};
+            messageToSend = this.message;
         } else {
             String[] msg = message.message();
 
             if (msg == null || msg.length == 0) {
-                messageToSend = new String[]{this.message};
+                messageToSend = this.message;
             } else {
                 messageToSend = msg;
             }

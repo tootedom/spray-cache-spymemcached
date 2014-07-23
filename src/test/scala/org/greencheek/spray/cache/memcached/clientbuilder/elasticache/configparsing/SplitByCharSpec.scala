@@ -1,11 +1,15 @@
 package org.greencheek.spray.cache.memcached.clientbuilder.elasticache.configparsing
 
+import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
+import org.specs2.runner.JUnitRunner
 
 /**
  * Created by dominictootell on 22/07/2014.
  */
-class SplitByCharTest extends Specification {
+@RunWith(classOf[JUnitRunner])
+class SplitByCharSpec extends Specification {
+
   "A string with no char separator should return the string" in  {
     val splitItems : Seq[String] = SplitByChar.split("test",',')
 
