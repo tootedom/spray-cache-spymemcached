@@ -104,6 +104,10 @@ class BaseMemcachedCache[Serializable](
     cacheHitMissLogger.debug("{ \"cachemiss\" : \"{}\", \"cachetype\" : \"{}\"}",key,cacheType)
   }
 
+  private def warnCacheDisabled() : Unit = {
+    logger.warn("Cache is disabled")
+  }
+
 
 
   private def logWarn(msg : String, item1 : Any, item2 : Any) : Unit = {
@@ -154,8 +158,9 @@ class BaseMemcachedCache[Serializable](
 
   def get(key: Any): Option[Future[Serializable]] = {
     val keyString : String = getHashedKey(key.toString)
-    if(!isEnabled) {
+    if(!isEnabled()) {
       logCacheMiss(keyString,MemcachedCache.CACHE_TYPE_CACHE_DISABLED)
+      warnCacheDisabled()
       None
     } else {
       val future : Future[Serializable] = store.get(keyString)
@@ -196,18 +201,19 @@ class BaseMemcachedCache[Serializable](
     val keyToString : String = key.toString
     val keyString = getHashedKey(keyToString)
 
-    var staleCacheKey : String = null
-    var staleCacheExpiry : Duration = null;
-    if(useStaleCache) {
-      staleCacheKey = createStaleCacheKey(keyString)
-      staleCacheExpiry = itemExpiry.plus(staleCacheAdditionalTimeToLiveValue)
-    }
-
-    if(!isEnabled) {
+    if(!isEnabled()) {
       logCacheMiss(keyString,MemcachedCache.CACHE_TYPE_CACHE_DISABLED)
+      warnCacheDisabled()
       genValue()
     }
     else {
+      var staleCacheKey : String = null
+      var staleCacheExpiry : Duration = null;
+      if(useStaleCache) {
+        staleCacheKey = createStaleCacheKey(keyString)
+        staleCacheExpiry = itemExpiry.plus(staleCacheAdditionalTimeToLiveValue)
+      }
+
       val promise = Promise[Serializable]()
       // create and store a new future for the to be generated value
       // first checking against local a cache to see if the computation is already
@@ -221,7 +227,7 @@ class BaseMemcachedCache[Serializable](
         if(cachedObject == null)
         {
             logger.debug("set requested for {}", keyString)
-            cacheWriteFunction(genValue(), promise, keyString, staleCacheKey, itemExpiry,staleCacheExpiry , ec)
+            cacheWriteFunction(genValue(), promise, keyString, staleCacheKey, itemExpiry,staleCacheExpiry,ec)
         }
         else {
           store.remove(keyString,promise.future)
@@ -407,7 +413,8 @@ class BaseMemcachedCache[Serializable](
   }
 
   def remove(key: Any) : Option[Future[Serializable]] = {
-    if(!isEnabled) {
+    if(!isEnabled()) {
+      warnCacheDisabled()
       None
     }
     else {
@@ -470,22 +477,24 @@ class BaseMemcachedCache[Serializable](
   }
 
   def clear(): Unit = {
-    if ( allowFlush ) {
-      try {
-        clearInternalCaches()
-        getMemcachedClient().flush()
-      } catch {
-        case e : Exception => {
-          logger.error("Exception encountered when attempting to flush memcached")
+    if(isEnabled()) {
+      if (allowFlush) {
+        try {
+          clearInternalCaches()
+          getMemcachedClient().flush()
+        } catch {
+          case e: Exception => {
+            logger.error("Exception encountered when attempting to flush memcached")
+          }
         }
+      } else {
+        throw new UnsupportedOperationException
       }
-    } else {
-      throw new UnsupportedOperationException
     }
   }
 
   def size = {
-    if(!isEnabled) {
+    if(!isEnabled()) {
       0
     }
     else {
@@ -495,15 +504,9 @@ class BaseMemcachedCache[Serializable](
   }
 
   def close()= {
-    if(isEnabled) {
-      clearInternalCaches()
-      clientFactory.shutdown()
-    }
-
+    clearInternalCaches()
+    clientFactory.shutdown()
   }
 
-  def isCacheEnabled() : Boolean = {
-    isEnabled
-  }
 
 }

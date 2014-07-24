@@ -1,13 +1,16 @@
 package org.greencheek.spray.cache.memcached
 
+import java.util.Random
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
 import org.greencheek.elasticacheconfig.server.StringServer
 import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.AddressByNameHostResolver
+import org.greencheek.spray.cache.memcached.keyhashing.XXJavaHash
 import org.greencheek.util.memcached.{WithMemcached, MemcachedBasedSpec}
 import org.junit.runner.RunWith
+import org.specs2.matcher.Matcher
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
 
@@ -110,8 +113,6 @@ class ElastiCacheTest extends MemcachedBasedSpec {
       true
 
     }
-  }
-  "An ElasticCache with config updates" >> {
     "can store a piece of content, in different memcached as the configurations are updated in elasticache" in memcachedContext {
 
       System.out.println("===========")
@@ -195,6 +196,7 @@ class ElastiCacheTest extends MemcachedBasedSpec {
       true
 
     }
+
   }
 
 }

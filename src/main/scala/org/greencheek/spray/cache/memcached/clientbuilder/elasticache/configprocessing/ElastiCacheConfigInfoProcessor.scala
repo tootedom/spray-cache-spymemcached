@@ -36,8 +36,6 @@ class ElastiCacheConfigInfoProcessor(val configParser : ElastiCacheConfigParser,
 
     } else {
       logger.debug("Invalid configuration provided for elasticache configuration")
-
     }
-
   }
 }

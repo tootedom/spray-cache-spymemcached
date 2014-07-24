@@ -5,8 +5,10 @@ import java.util.concurrent.{TimeUnit, ScheduledExecutorService, Executors}
 import java.util.concurrent.atomic.AtomicBoolean
 
 import net.spy.memcached.{MemcachedClient, ConnectionFactory}
+import org.greencheek.spray.cache.memcached.MemcachedCache
 import org.greencheek.spray.cache.memcached.clientbuilder.elasticache.ElastiCacheHost
 import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.HostResolver
+import org.slf4j.{LoggerFactory, Logger}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.Duration
@@ -18,6 +20,7 @@ class UpdateReferencedMemcachedClientService(val dnsLookupService : HostResolver
                                              val dnsConnectionTimeout : Duration,
                                              val memcachedConnectionFactory : ConnectionFactory,
                                              val delayBeforeOldClientClose : Duration) extends UpdateClientService {
+  private val logger : Logger = LoggerFactory.getLogger(classOf[UpdateReferencedMemcachedClientService])
 
   val scheduledExecutor : ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
   val isShutdown = new AtomicBoolean(false)
@@ -32,22 +35,28 @@ class UpdateReferencedMemcachedClientService(val dnsLookupService : HostResolver
 
       val currentClient: ReferencedClient = referencedClient
       if (hosts.size == 0) {
+        logger.warn("No cache hosts available.  Marking cache as disabled.")
         referencedClient = UnavailableReferencedClient
         true
       } else {
         val resolvedHosts: Seq[InetSocketAddress] = getSocketAddresses(hosts);
         if (resolvedHosts.size == 0) {
+          logger.warn("No resolvable cache hosts available.  Marking cache as disabled.")
           referencedClient = UnavailableReferencedClient
           true
         } else {
+          logger.info("New client being created for new cache hosts.")
+
           referencedClient =  ReferencedClient(true, new MemcachedClient(memcachedConnectionFactory, convert(resolvedHosts)))
 
           if (currentClient.isAvailable) {
+            logger.debug("Scheduling shutdown of old cache client in {}ms",delayBeforeOldClientClose.toMillis )
             scheduledExecutor.schedule(new Runnable {
               override def run(): Unit = {
+                logger.info("Shutting down old cache client.")
                 currentClient.client.shutdown();
               }
-            }, dnsConnectionTimeout.toMillis, TimeUnit.MILLISECONDS)
+            }, delayBeforeOldClientClose.toMillis, TimeUnit.MILLISECONDS)
           }
 
           if(isShutdown.get() != shutdown) {
