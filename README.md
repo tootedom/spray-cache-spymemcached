@@ -756,6 +756,37 @@ instances that should be connected to:
 When the version number (the second line) increases a new spy memcached instance is created, and the old spy memcached instance
 is scheduled for being closed.
 
+The ElastiCache Configuration Endpoint is specified via the `elastiCacheConfigHosts` parameter.
+
+````
+    elastiCacheConfigHosts = "yourcluster.jgkygp.0001.euw1.cache.amazonaws.com:11211"   
+````    
+
+For the moment you should only specify 1 configuration host.  Currently a cache cluster is only in one Availability Zone.
+a cluster cannot at the moment in AWS span multiple Availability Zones.  You can have 3 separate elasticache clusters,
+one in each availability zone, but the cache will only connect to 1 availability zone at any one time.
+
+Whilst is is technically possible for the client to take a comma separated list:
+
+
+````
+    elastiCacheConfigHosts = "yourcluster.jgkygp.0001.euw1.cache.amazonaws.com:11211,xxxx:11211,xxxx:11211"       
+````    
+
+It will currently only connect to 1 of the clusters, and if a reconnect to a cluster is performed (see below), then the
+Elasticache client will go to the next cluster in the comma separated hosts list. i.e.  Given the following:
+ 
+````
+    elastiCacheConfigHosts = "clusterzone1:11211,clusterzone2:11211,clusterzone3:11211"                    
+````    
+
+If we are currently connected to clusterzone1, and a reconnection occurs, the client will attempt to connect to the 
+clusterzone2 configuration endpoint.  It does NOT connect to all zones.  As you can see this is not really something that
+useful; and will mostly like change in the immediate future.  Therefore, for the moment, only specify one 
+elasticcache configuration endpoint host:port combo.
+ 
+
+
 
 ### Specifying the polling time ###
 
