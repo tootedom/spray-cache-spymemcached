@@ -4,7 +4,8 @@
     - [Library Dependencies](#library-dependencies)
     - [Thundering Herds](#thundering-herds)
         - [Memcached library, thundering herd, and how does it do it](#memcached-library-thundering-herd-and-how-does-it-do-it)
-    - [Example Uses](#example-uses)
+        - [Thundering herd caveat](#thundering-herd-caveat)
+    - [Configuration](#configuration)
         - [Max Capacity](#max-capacity)
         - [Specifying the Memcached hosts](#specifying-the-memcached-hosts)
         - [Host Resolution](#host-resolution)
@@ -21,6 +22,16 @@
         - [Consistent Hashing](#consistent-hashing)
         - [Caching Serializable Objects](#caching-serializable-objects) 
         - [Serialization Mechanism](#serialization-mechanism)
+        - [Stale Caching](#stale-caching)
+    - [AWS ElastiCache Support](#aws-elasticache-support)
+        - [ElastiCache Configuration Endpoint](#elasticache-configuration-endpoint)
+        - [Specifying the polling time](#specifying-the-polling-time)
+        - [Persistent Connection](#persistent-connection)
+        - [Cluster nodes update and all client closing](#cluster-nodes-update-and-all-client-closing)
+        - [ElastiCache Configuration Endpoint timeout](#elasticache-configuration-endpoint-timeout)
+        - [Host lookup](#host-lookup)
+        
+        
 
 ----
 
@@ -134,6 +145,15 @@ the memcached cached requesting this.  The follow will wait for the memcached se
     new MemcachedCache[String](maxCapacity = 500,
                                waitForMemcachedSet = true,
                                setWaitDuration = Duration(1,TimeUnit.SECONDS))
+                               
+
+### Thundering herd caveat ###
+
+The thundering herd protection is just for the value's calculation, and not that of the direct lookups against the cache (i.e. `.get(key : Any)`)
+The reason being that the base `Cache` interface does not support it.  Only the `.apply(..)` method takes an implicit 
+Execution context.  The other interface methods do not take an ExecutionContext, and as a result cannot execute futures 
+asynchronously.
+                               
 
 ----
 
@@ -169,7 +189,7 @@ construct arguments:  https://github.com/tootedom/spray-cache-extensions/blob/ma
 
 ----
 
-## Configuration/Usage Examples ##
+## Configuration ##
 
 The below will give a couple of example code snippets for using, and configuring the cache for various scenarios:
 
@@ -638,3 +658,183 @@ The Fast Serialization, which is the default, can be explicitly set as follows:
                                                           protocol = Protocol.TEXT, keyHashType = XXJavaHash,
                                                           memcachedGetTimeout = Duration(1,TimeUnit.SECONDS),
                                                           serializingTranscoder = new FastSerializingTranscoder())
+                                                          
+                                                          
+----
+                                                          
+### Stale Caching ###
+                                                          
+Since `0.2.0` the client supports a stale caching mechanism; this by default is not enabled as it requires an additional
+future (via composition) to perform the additional cache lookup.  It is also an addition lookup on the memcached server, and
+also will use x2 the memory (items are stored twice in the cache).
+ 
+The stale caching function is a mini "stale-while-revalidate" mechanism.  Without the stale caching enabled, when an item
+expires in the cache, which is popular; then a lot of requests will be waiting on the cache item to be regenerated from the
+backend.  This means you can have a spike in a larger than you would like requests.
+
+With stale caching enabled, only one request will regenerate the item from the backend cache.  The other request will use
+a stale cache.  The stale cached is ONLY checked is a future exists in the internal cache, meaning that a backend request 
+is in operation to calculate the cache item
+
+With stale caching enabled when an item is stored in memcached, it is stored twice.  The 2nd time it is stored under a 
+different key.
+
+The following options control the stale caching.
+
+````
+    val useStaleCache : Boolean = false,
+    val staleCacheAdditionalTimeToLive : Duration = Duration.MinusInf,
+    val staleCachePrefix  : String = "stale",
+    val staleMaxCapacity : Int = -1,
+    val staleCacheMemachedGetTimeout : Duration = Duration.MinusInf
+````                                   
+         
+                                                          
+The default settings for the Stale caching, after it is turned on with `useStaleCache = true` are as above.  To set the 
+prefix (which is prepended to the origin key, after it is hash), use `staleCachePrefix`.  To set the time to live of
+stale item use `staleCacheAdditionalTimeToLive`.  This Duration is ADDED to the original `timeToLive` of the item. 
+A `Duration.MinusInf` means the stale item is kept for `timeToLive` x 2.   The capacity of internal thundering herd 
+cache for the stale caching is specified with `staleMaxCapacity`.  Again '-1' means the capacity is the same as `maxCapacity`.
+The timeout for the get against memcached for the stale entry is specified in the param `staleCacheMemachedGetTimeout`.
+If this is `Duration.MinusInf` the timeout is the same as the timeout for the original key (`memcachedGetTimeout`)
+                                                          
+----
+
+## AWS ElastiCache Support ##
+
+Since release `0.2.0` there has been support AWS's ElasticCache memcached cluster:
+ 
+- http://aws.amazon.com/elasticache/
+- http://docs.aws.amazon.com/AmazonElastiCache/latest/UserGuide/WhatIs.html
+
+This is done by creating an instance of `ElastiCache` rather than `MemcachedCache`.  An example is as follows:
+ 
+```` 
+    cache = new ElastiCache[String](elastiCacheConfigHosts = "yourcluster.jgkygp.0001.euw1.cache.amazonaws.com:11211",
+                                    initialConfigPollingDelay = 0,
+                                    configPollingTime = 60,
+                                    configPollingTimeUnit = TimeUnit.SECONDS,                                    
+                                    delayBeforeClientClose = Duration(10,TimeUnit.SECONDS),                                    
+                                    dnsConnectionTimeout = Duration(3,TimeUnit.SECONDS),
+                                    timeToLive = Duration(1, TimeUnit.SECONDS),
+                                    connectionTimeoutInMillis = 3000,
+                                    numberOfConsecutiveInvalidConfigurationsBeforeReconnect = 3,
+                                    reconnectDelay = Duration(5,TimeUnit.SECONDS),
+                                    idleReadTimeout = Duration(125,TimeUnit.SECONDS)                                    
+                                    )                                                                                                         
+````        
+
+The ElastiCache supports the same configuration options that have been described previously:
+
+- timeToLive
+- maxCapacity
+- set timeout
+- get timeout
+- hashing
+- key prefix
+                                           
+### ElastiCache Configuration Endpoint ###
+                                           
+The `ElastiCache` cache works by using the auto discovery mechanism as described here:
+                                            
+- http://docs.aws.amazon.com/AmazonElastiCache/latest/UserGuide/AutoDiscovery.AddingToYourClientLibrary.html
+                                            
+You supply to the `ElastiCache` cache the url of the ElastiCache Configuration Endpoint.  The `ElastiCache` cache uses
+the netty library (http://netty.io/) to periodically send the `config get cluster` command to the ElastiCache Configuration Endpoint.
+The ElastiCache keeps a persistent connection open to the ElastiCache Configuration Endpoint, sending the command periodically.
+The ElastiCache Configuration Endpoint returns a configuration similar to the following, that details the actually memcached 
+instances that should be connected to:
+                                             
+````
+    CONFIG cluster 0 147
+    12
+    myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211
+    
+    END
+````
+
+When the version number (the second line) increases a new spy memcached instance is created, and the old spy memcached instance
+is scheduled for being closed.
+
+
+### Specifying the polling time ###
+
+By default the ElastiCache cache polls the ElastiCache Configuration Endpoint for an update to the nodes that make up the 
+cluster every 60 seconds.  This can be configured via the following parameters:
+
+````
+    initialConfigPollingDelay = 0,
+    configPollingTime = 60,
+    configPollingTimeUnit = TimeUnit.SECONDS,
+````    
+    
+If no hosts are available, then the cache is disabled and the following warning message will be output.  Your application
+will still continue to work, but you will just have no caching or thundering herd protection.  All `.get()` will be misses
+and any `apply(..)` calls will wait on a new future to complete (i.e. call the backend).
+
+````
+    o.g.s.c.memcached.MemcachedCache - Cache is disabled
+````    
+
+### Persistent Connection ###
+    
+The ElastiCache uses a persistent connection to the ElastiCache Configuration Endpoint.  If the connection is lost,
+the client will automatically reconnect.  The client will wait for a period (default 5 seconds) before reconnecting.  This
+can be changed by specifying `reconnectDelay`.
+
+If the client does also receive any data from the ElastiCache Configuration Endpoint, a reconnection will be made; this
+idle period is controlled by the setting `idleReadTimeout`.  This is set to 125 seconds by default.  If you modify this setting
+you shouldn't set it lower that the polling duration; as you will just end up in the persistent connection not being persistent.
+
+````
+    reconnectDelay = Duration(5,TimeUnit.SECONDS),
+    idleReadTimeout = Duration(125,TimeUnit.SECONDS)                                    
+````
+
+If the ElastiCache Configuration Endpoint is in some way returning invalid configurations, then the client will reconnect
+to the Configuration Endpoint.  By default it takes 3 consecutive invalid configurations before the client will reconnect.
+This is controlled by the parameter: `numberOfConsecutiveInvalidConfigurationsBeforeReconnect`
+
+````
+   numberOfConsecutiveInvalidConfigurationsBeforeReconnect = 5
+````   
+
+### Cluster nodes update and all client closing ###
+    
+When the ElastiCache Configuration Endpoint, outputs a configuration update a new spy memcached client is created, and
+the old client is closed.  There a delay before the old client is closed, as it may still be in use (i.e. network requests 
+may still be executing).  By default the delay is 10 second; this can be change by specifying the parameter:
+
+````
+    delayBeforeClientClose = Duration(1,TimeUnit.SECONDS),
+````
+                                        
+### ElastiCache Configuration Endpoint timeout ###
+
+By default the client will wait for 3 seconds for a connection to the ElastiCache Configuration Endpoint.  This can be 
+changed by the following parameter `connectionTimeoutInMillis`.
+    
+````                                       
+    connectionTimeoutInMillis = 3000
+````    
+
+### Host lookup ###
+
+When the ElastiCache Configuration Endpoint returns the configuration information it returns the hostname, and it may 
+send with it the IP address.
+
+````
+    CONFIG cluster 0 147
+    12
+    myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211
+    
+    END
+````
+
+If the IP address is not returned the client will perform a DNS lookup on the hostname.  By default the timeout is 3 seconds.
+This can be changed with the parameter `dnsConnectionTimeout`
+
+````
+    dnsConnectionTimeout = Duration(5,TimeUnit.SECONDS)
+````
+

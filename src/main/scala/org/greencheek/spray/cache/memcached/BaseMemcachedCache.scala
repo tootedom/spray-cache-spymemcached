@@ -7,19 +7,9 @@ import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap
 import scala.concurrent.{Promise, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import net.spy.memcached._
-import java.net.InetSocketAddress
 import org.slf4j.{LoggerFactory, Logger}
 import java.util.concurrent.{TimeoutException, TimeUnit}
-import net.spy.memcached.ConnectionFactoryBuilder.{Protocol, Locator}
-import net.spy.memcached.transcoders.Transcoder
-import org.greencheek.spy.extensions.FastSerializingTranscoder
-import scala.collection.JavaConversions._
 import org.greencheek.spray.cache.memcached.keyhashing._
-import org.greencheek.spy.extensions.connection.CustomConnectionFactoryBuilder
-import org.greencheek.spy.extensions.hashing.{JenkinsHash => JenkinsHashAlgo, AsciiXXHashAlogrithm, XXHashAlogrithm}
-import org.greencheek.spray.cache.memcached.hostparsing.{CommaSeparatedHostAndPortStringParser, HostStringParser}
-import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.{AddressByNameHostResolver, HostResolver}
-import org.greencheek.spray.cache.memcached.hostparsing.connectionchecking.{TCPHostValidation, HostValidation}
 import net.spy.memcached.internal.CheckedOperationTimeoutException
 
 
@@ -170,7 +160,7 @@ class BaseMemcachedCache[Serializable](
       else {
         logCacheHit(keyString,MemcachedCache.CACHE_TYPE_VALUE_CALCULATION)
         if(useStaleCache) {
-          Some(getFutueForStaleDistributedCacheLookup(keyString, future, null))
+          Some(getFutueForStaleDistributedCacheLookup(createStaleCacheKey(keyString), future, null))
         } else {
           Some(future)
         }
