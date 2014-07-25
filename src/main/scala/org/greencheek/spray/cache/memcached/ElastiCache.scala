@@ -1,9 +1,12 @@
 package org.greencheek.spray.cache.memcached
 
+import org.greencheek.elasticacheconfig.client.{LocalhostElastiCacheServerConnectionDetails, ElastiCacheServerConnectionDetails}
 import org.greencheek.spray.cache.memcached.clientbuilder.ClientFactory
 import org.greencheek.spray.cache.memcached.clientbuilder.elasticache.ElastiCacheClientFactory
+import org.greencheek.spray.cache.memcached.hostparsing.{CommaSeparatedHostAndPortStringParser, HostStringParser}
 import org.greencheek.spray.cache.memcached.spyconnectionfactory.SpyConnectionFactoryBuilder
 import spray.caching.Cache
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import net.spy.memcached._
@@ -18,10 +21,10 @@ import org.greencheek.spray.cache.memcached.hostparsing.dnslookup.{AddressByName
  */
 class ElastiCache[Serializable](val timeToLive: Duration = MemcachedCache.DEFAULT_EXPIRY,
                                 val maxCapacity: Int = MemcachedCache.DEFAULT_CAPACITY,
-                                val elastiCacheConfigHost : String = "localhost",
-                                val elastiCacheConfigPort : Int = 11211,
+                                val elastiCacheConfigHosts : String = "localhost:11211",
                                 val configPollingTime : Long = 60,
                                 val initialConfigPollingDelay : Long = 0,
+                                val connectionTimeoutInMillis : Int = 3000,
                                 val configPollingTimeUnit : TimeUnit = TimeUnit.SECONDS,
                                 val idleReadTimeout: Duration = Duration(125,TimeUnit.SECONDS),
                                 val reconnectDelay: Duration = Duration(5,TimeUnit.SECONDS),
@@ -52,6 +55,7 @@ class ElastiCache[Serializable](val timeToLive: Duration = MemcachedCache.DEFAUL
   extends Cache[Serializable] {
 
 
+
   val clientFactory : ClientFactory = new ElastiCacheClientFactory(
     connnectionFactory = SpyConnectionFactoryBuilder.createConnectionFactory(
       hashingType = hashingType,
@@ -62,8 +66,7 @@ class ElastiCache[Serializable](val timeToLive: Duration = MemcachedCache.DEFAUL
       readBufferSize = readBufferSize,
       keyHashType = keyHashType
     ),
-    elasticacheConfigHost = elastiCacheConfigHost,
-    elasticacheConfigPort = elastiCacheConfigPort,
+    elastiCacheConfigHosts = parseElastiCacheConfigHosts(elastiCacheConfigHosts),
     configPollingTime = configPollingTime,
     initialConfigPollingDelay = initialConfigPollingDelay,
     configPollingTimeUnit = configPollingTimeUnit,
@@ -72,7 +75,8 @@ class ElastiCache[Serializable](val timeToLive: Duration = MemcachedCache.DEFAUL
     delayBeforeClientClose = delayBeforeClientClose,
     dnsLookupService = hostResolver,
     dnsLookupTimeout = dnsConnectionTimeout,
-    numberOfConsecutiveInvalidConfigurationsBeforeReconnect = numberOfConsecutiveInvalidConfigurationsBeforeReconnect
+    numberOfConsecutiveInvalidConfigurationsBeforeReconnect = numberOfConsecutiveInvalidConfigurationsBeforeReconnect,
+    connectionTimeoutInMillis = connectionTimeoutInMillis
   )
 
   val baseMemcachedCached = new BaseMemcachedCache[Serializable](
@@ -95,7 +99,36 @@ class ElastiCache[Serializable](val timeToLive: Duration = MemcachedCache.DEFAUL
     staleCacheMemachedGetTimeout = staleCacheMemachedGetTimeout
   )
 
+  private def parseElastiCacheConfigHosts(hostsString : String) : Array[ElastiCacheServerConnectionDetails] = {
+    val hostStringParser : HostStringParser =  CommaSeparatedHostAndPortStringParser
+    var hosts : String = null
+    if(hostsString == null || hostsString.trim.length == 0) {
+      hosts = "localhost:11211"
+    } else {
+      hosts = hostsString
+    }
 
+    val parsedHosts = hostStringParser.parseMemcachedNodeList(hosts)
+
+    val connectionDetails = if(parsedHosts.size>0) {
+      new Array[ElastiCacheServerConnectionDetails](parsedHosts.size)
+    } else {
+      new Array[ElastiCacheServerConnectionDetails](0)
+    }
+
+    var i : Int = 0
+    while(i<parsedHosts.size) {
+      val details : (String,Int) = parsedHosts(i)
+      connectionDetails(i) = new ElastiCacheServerConnectionDetails(details._1,details._2)
+      i+=1
+    }
+
+    if(parsedHosts.size==0) {
+      connectionDetails(0) = new LocalhostElastiCacheServerConnectionDetails
+    }
+
+    connectionDetails
+  }
 
   override def get(key: Any): Option[Future[Serializable]] = {
     baseMemcachedCached.get(key)

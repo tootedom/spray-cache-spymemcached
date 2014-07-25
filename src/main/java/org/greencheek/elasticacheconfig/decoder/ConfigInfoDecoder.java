@@ -4,6 +4,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import org.greencheek.elasticacheconfig.domain.ClusterConfigurationBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.Charset;
 import java.util.List;
@@ -11,6 +13,7 @@ import java.util.List;
 public class ConfigInfoDecoder extends ReplayingDecoder<ConfigInfoDecodingState> {
 
     private static final RuntimeException INVALID_VERSION = new InvalidConfigVersionException();
+    private static final Logger log = LoggerFactory.getLogger(ConfigInfoDecoder.class);
 
 
     private final ClusterConfigurationBuilder configBuilder = new ClusterConfigurationBuilder();
@@ -22,7 +25,9 @@ public class ConfigInfoDecoder extends ReplayingDecoder<ConfigInfoDecodingState>
     private boolean readStringLine(ByteBuf byteBuf, ConfigInfoDecodingState currentState, ConfigInfoDecodingState stateToTransitionTo) {
         int eol = findEndOfLine(byteBuf);
         if(eol!=-1) {
-            configBuilder.setValue(readLine(eol, byteBuf).toString(Charset.forName("UTF-8")), currentState);
+            String line = readLine(eol, byteBuf).toString(Charset.forName("UTF-8"));
+            log.debug("Config line read: {}",line);
+            configBuilder.setValue(line, currentState);
             checkpoint(stateToTransitionTo);
             return true;
         } else {
@@ -36,6 +41,7 @@ public class ConfigInfoDecoder extends ReplayingDecoder<ConfigInfoDecodingState>
         int eol = findEndOfLine(byteBuf);
         if(eol!=-1) {
             String version = readLine(eol,byteBuf).toString(Charset.forName("UTF-8"));
+            log.debug("Config line read: {}",version);
             long versionNumber = parseLong(version, Long.MIN_VALUE);
             if(versionNumber==Long.MIN_VALUE) {
                 ctx.fireExceptionCaught(INVALID_VERSION);
@@ -128,7 +134,11 @@ public class ConfigInfoDecoder extends ReplayingDecoder<ConfigInfoDecodingState>
                     byteBuf.readBytes(Integer.MAX_VALUE);
                 }
             case NODES:
-                if(!readStringLine(byteBuf, ConfigInfoDecodingState.NODES, ConfigInfoDecodingState.END)) {
+                if(!readStringLine(byteBuf, ConfigInfoDecodingState.NODES, ConfigInfoDecodingState.BLANK)) {
+                    byteBuf.readBytes(Integer.MAX_VALUE);
+                }
+            case BLANK:
+                if(!readStringLine(byteBuf, ConfigInfoDecodingState.BLANK, ConfigInfoDecodingState.END)) {
                     byteBuf.readBytes(Integer.MAX_VALUE);
                 }
             case END:

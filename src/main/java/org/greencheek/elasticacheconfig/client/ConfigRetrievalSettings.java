@@ -13,35 +13,40 @@ public class ConfigRetrievalSettings {
     private final RequestConfigInfoScheduler scheduledConfigRetrieval;
     private final AsyncConfigInfoMessageHandler configInfoMessageHandler;
 
-    private final String elasticacheConfigHost;
-    private final int elasticacheConfigPort;
-
     private final TimeUnit idleTimeoutTimeUnit;
     private final long idleReadTimeout;
 
     private final TimeUnit reconnectDelayTimeUnit;
     private final long reconnectDelay;
 
+    private final int connectionTimeoutInMillis;
+
     private final int numberOfConsecutiveInvalidConfigsBeforeReconnect;
+
+    private final ElastiCacheServerConnectionDetails[] elasticacheConfigHosts;
 
     public ConfigRetrievalSettings(RequestConfigInfoScheduler scheduledConfigRetrieval,
                                    AsyncConfigInfoMessageHandler obtainedConfigHandler,
-                                   String elasticacheConfigHost,
-                                   int elasticacheConfigPort,
+                                   ElastiCacheServerConnectionDetails[] configurationServerConnectionDetails,
                                    TimeUnit idleTimeoutTimeUnit,
                                    long idleReadTimeout,
                                    TimeUnit reconnectDelayTimeUnit,
                                    long reconnectDelay,
-                                   int noInvalidConfigsBeforeReconnect) {
+                                   int noInvalidConfigsBeforeReconnect,
+                                   int connectionTimeoutInMillis) {
         this.scheduledConfigRetrieval = scheduledConfigRetrieval;
         this.configInfoMessageHandler = obtainedConfigHandler;
-        this.elasticacheConfigHost = elasticacheConfigHost;
-        this.elasticacheConfigPort = elasticacheConfigPort;
+        this.elasticacheConfigHosts = new ElastiCacheServerConnectionDetails[configurationServerConnectionDetails.length];
+        int i = 0;
+        for(ElastiCacheServerConnectionDetails host : configurationServerConnectionDetails) {
+            elasticacheConfigHosts[i++] = host;
+        }
         this.idleTimeoutTimeUnit = idleTimeoutTimeUnit;
         this.idleReadTimeout = idleReadTimeout;
         this.reconnectDelayTimeUnit = reconnectDelayTimeUnit;
         this.reconnectDelay = reconnectDelay;
         this.numberOfConsecutiveInvalidConfigsBeforeReconnect = noInvalidConfigsBeforeReconnect;
+        this.connectionTimeoutInMillis = connectionTimeoutInMillis;
     }
 
     public RequestConfigInfoScheduler getScheduledConfigRetrieval() {
@@ -52,12 +57,8 @@ public class ConfigRetrievalSettings {
         return configInfoMessageHandler;
     }
 
-    public String getElasticacheConfigHost() {
-        return elasticacheConfigHost;
-    }
-
-    public int getElasticacheConfigPort() {
-        return elasticacheConfigPort;
+    public ElastiCacheServerConnectionDetails[] getElasticacheConfigHosts() {
+        return elasticacheConfigHosts;
     }
 
     public TimeUnit getIdleTimeoutTimeUnit() {
@@ -78,5 +79,9 @@ public class ConfigRetrievalSettings {
 
     public int getNumberOfConsecutiveInvalidConfigsBeforeReconnect() {
         return numberOfConsecutiveInvalidConfigsBeforeReconnect;
+    }
+
+    public int getConnectionTimeoutInMillis() {
+        return connectionTimeoutInMillis;
     }
 }

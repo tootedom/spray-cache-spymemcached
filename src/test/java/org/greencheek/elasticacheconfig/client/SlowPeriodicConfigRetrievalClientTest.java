@@ -41,7 +41,7 @@ public class SlowPeriodicConfigRetrievalClientTest {
     @ConfigMessage(message = {"CONFIG"," cluster 0 ","147\r\n" +
             "+","1","00","\r\n" +
             "myCluster.","pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211${REMOTE_ADDR}\r\n" +
-            "END\r\n"
+            "\nEND\r\n"
     })
     public void testMultiWrites() {
         ConfigRetrievalSettingsBuilder builder = new ConfigRetrievalSettingsBuilder();
@@ -59,8 +59,8 @@ public class SlowPeriodicConfigRetrievalClientTest {
         builder.setConfigInfoProcessor(processor);
         builder.setConfigPollingTime(0,5, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(70,TimeUnit.SECONDS);
-        builder.setElasticacheHost("localhost");
-        builder.setElasticachePort(server.getPort());
+        builder.addElastiCacheHost(new ElastiCacheServerConnectionDetails("localhost",server.getPort()));
+
         builder.setNumberOfInvalidConfigsBeforeReconnect(5);
 
         client = new PeriodicConfigRetrievalClient(builder.build());
@@ -83,7 +83,7 @@ public class SlowPeriodicConfigRetrievalClientTest {
     @ConfigMessage(message = {"CONFIG"," cluster 0 ","147\r\n" +
             "+","1","00","\r\n" +
             "myCluster.","pc4ldq.0001.use1.cache.","amazonaws.com|10.82.235.120|11211"," myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211${REMOTE_ADDR}\r\n" +
-            "END\r\n"
+            "\nEND\r\n"
     })
     public void testMultipleSlowWrites() {
         ConfigRetrievalSettingsBuilder builder = new ConfigRetrievalSettingsBuilder();
@@ -101,8 +101,8 @@ public class SlowPeriodicConfigRetrievalClientTest {
         builder.setConfigInfoProcessor(processor);
         builder.setConfigPollingTime(0,10, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(70,TimeUnit.SECONDS);
-        builder.setElasticacheHost("localhost");
-        builder.setElasticachePort(server.getPort());
+        builder.addElastiCacheHost(new ElastiCacheServerConnectionDetails("localhost",server.getPort()));
+
         builder.setNumberOfInvalidConfigsBeforeReconnect(5);
 
         client = new PeriodicConfigRetrievalClient(builder.build());

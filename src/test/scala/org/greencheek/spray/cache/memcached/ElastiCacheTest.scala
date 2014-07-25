@@ -52,7 +52,7 @@ class ElastiCacheTest extends MemcachedBasedSpec {
       System.out.flush()
 
       val configurationsMessage = Array(
-        "CONFIG cluster 0 147\r\n" + "1\r\n" + "localhost|127.0.0.1|" + memcachedContext.memcached.port + "\r\n" + "END\r\n"
+        "CONFIG cluster 0 147\r\n" + "1\r\n" + "localhost|127.0.0.1|" + memcachedContext.memcached.port + "\r\n" + "\nEND\r\n"
       )
       var server: StringServer = new StringServer(configurationsMessage, 0, TimeUnit.SECONDS)
       server.before(configurationsMessage, TimeUnit.SECONDS, -1, false)
@@ -64,8 +64,7 @@ class ElastiCacheTest extends MemcachedBasedSpec {
 
         val hosts = "localhost:" + memcachedDport
 
-        cache = new ElastiCache[String](elastiCacheConfigHost = "localhost",
-          elastiCacheConfigPort = server.getPort,
+        cache = new ElastiCache[String](elastiCacheConfigHosts = "localhost:"+server.getPort.toString,
           configPollingTime = 10,
           configPollingTimeUnit = TimeUnit.SECONDS,
           protocol = Protocol.TEXT,
@@ -121,9 +120,9 @@ class ElastiCacheTest extends MemcachedBasedSpec {
       System.out.flush()
 
       val configurationsMessage = Array(
-        "CONFIG cluster 0 147\r\n" + "1\r\n" + "localhost|127.0.0.1|" + memcachedDport + "\r\n" + "END\r\n",
-        "CONFIG cluster 0 147\r\n" + "2\r\n" + "localhost|127.0.0.1|" + memcachedDport + " localhost|127.0.0.1|" + memcachedContext.memcached.port + "\r\n" + "END\r\n",
-        "CONFIG cluster 0 147\r\n" + "3\r\n" + "localhost|127.0.0.1|" + memcachedContext.memcached.port + "\r\n" + "END\r\n"
+        "CONFIG cluster 0 147\r\n" + "1\r\n" + "localhost|127.0.0.1|" + memcachedDport + "\r\n" + "\nEND\r\n",
+        "CONFIG cluster 0 147\r\n" + "2\r\n" + "localhost|127.0.0.1|" + memcachedDport + " localhost|127.0.0.1|" + memcachedContext.memcached.port + "\r\n" + "\nEND\r\n",
+        "CONFIG cluster 0 147\r\n" + "3\r\n" + "localhost|127.0.0.1|" + memcachedContext.memcached.port + "\r\n" + "\nEND\r\n"
       )
 
       var server: StringServer = new StringServer(configurationsMessage, 0, TimeUnit.SECONDS)
@@ -135,8 +134,7 @@ class ElastiCacheTest extends MemcachedBasedSpec {
 
         val hosts = "localhost:" + memcachedDport
 
-        cache = new ElastiCache[String](elastiCacheConfigHost = "localhost",
-          elastiCacheConfigPort = server.getPort,
+        cache = new ElastiCache[String](elastiCacheConfigHosts = "localhost:"+server.getPort.toString,
           configPollingTime = 5,
           configPollingTimeUnit = TimeUnit.SECONDS,
           protocol = Protocol.TEXT,

@@ -8,6 +8,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.ReadTimeoutException;
+import org.greencheek.elasticacheconfig.client.ElastiCacheConfigServerChooser;
 import org.greencheek.elasticacheconfig.client.PeriodicConfigRetrievalClient;
 import org.greencheek.elasticacheconfig.confighandler.AsyncConfigInfoMessageHandler;
 import org.greencheek.elasticacheconfig.decoder.InvalidConfigVersionException;
@@ -35,9 +36,9 @@ public class ClientInfoClientHandler extends SimpleChannelInboundHandler<ConfigI
     private final long reconnectDelay;
     private final TimeUnit idleReadTimeUnit;
     private final long idleReadTimeout;
+    private final int connectionTimeoutInMillis;
 
-    private final String host;
-    private final int port;
+    private final ElastiCacheConfigServerChooser configServerChooser;
 
     private final AtomicInteger invalidConsecutiveConfigs = new AtomicInteger(0);
     private final int maxConsecutiveInvalidConfigsBeforeReconnect;
@@ -46,17 +47,18 @@ public class ClientInfoClientHandler extends SimpleChannelInboundHandler<ConfigI
                                    AsyncConfigInfoMessageHandler handler,
                                    TimeUnit reconnectTimeUnit,long reconnectDelay,
                                    TimeUnit idleReadTimeUnit, long idleReadTimeout,
-                                   String host, int port,
-                                   int noInvalidConfigsBeforeReconnect) {
+                                   ElastiCacheConfigServerChooser configServerChooser,
+                                   int noInvalidConfigsBeforeReconnect,
+                                   int connectionTimeoutInMillis) {
         this.obtainConfigComand = getConfigCommand;
         this.asyncConfigInfoMessageHandler = handler;
         this.reconnectTimeUnit = reconnectTimeUnit;
         this.reconnectDelay = reconnectDelay;
         this.idleReadTimeUnit = idleReadTimeUnit;
         this.idleReadTimeout = idleReadTimeout;
-        this.host = host;
-        this.port = port;
+        this.configServerChooser = configServerChooser;
         this.maxConsecutiveInvalidConfigsBeforeReconnect = noInvalidConfigsBeforeReconnect;
+        this.connectionTimeoutInMillis = connectionTimeoutInMillis;
     }
 
     @Override
@@ -100,15 +102,14 @@ public class ClientInfoClientHandler extends SimpleChannelInboundHandler<ConfigI
             log.info("Sleeping for {}s before reconnect.", reconnectTimeUnit.toSeconds(reconnectDelay));
         }
 
-        final String host = this.host;
-        final int port = this.port;
         final ClientInfoClientHandler handler = this;
         final EventLoop loop = ctx.channel().eventLoop();
         loop.schedule(new Runnable() {
             @Override
             public void run() {
                 log.info("Reconnecting");
-                PeriodicConfigRetrievalClient.configureBootstrap(host, port, handler, new Bootstrap(), loop,idleReadTimeUnit,idleReadTimeout);
+                PeriodicConfigRetrievalClient.configureBootstrap(configServerChooser, handler, new Bootstrap(), loop,
+                        idleReadTimeUnit,idleReadTimeout,connectionTimeoutInMillis);
             }
         }, reconnectDelay, reconnectTimeUnit);
     }

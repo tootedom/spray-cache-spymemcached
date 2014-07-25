@@ -25,6 +25,7 @@ public class PeriodicConfigRetrievalClientTest {
     String message = new String("CONFIG cluster 0 147\r\n" +
             "12\r\n" +
             "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211\r\n" +
+            "\n"+
             "END\r\n");
 
     @Rule
@@ -54,8 +55,8 @@ public class PeriodicConfigRetrievalClientTest {
         builder.setConfigInfoProcessor(processor);
         builder.setConfigPollingTime(0,5, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(70,TimeUnit.SECONDS);
-        builder.setElasticacheHost("localhost");
-        builder.setElasticachePort(server.getPort());
+        builder.addElastiCacheHost(new ElastiCacheServerConnectionDetails("localhost",server.getPort()));
+
 
         client = new PeriodicConfigRetrievalClient(builder.build());
         client.start();
@@ -74,10 +75,10 @@ public class PeriodicConfigRetrievalClientTest {
     @ConfigMessage(message = {"CONFIG cluster 0 147\r\n" +
             "INVALID_VERSION\r\n" +
             "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211\r\n" +
-            "END\r\n","CONFIG cluster 0 147\r\n" +
+            "\nEND\r\n","CONFIG cluster 0 147\r\n" +
             "12\r\n" +
             "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211\r\n" +
-            "END\r\n"})
+            "\nEND\r\n"})
     public void testInvalidConfigInfoIsNotReturned() {
         ConfigRetrievalSettingsBuilder builder = new ConfigRetrievalSettingsBuilder();
         final CountDownLatch latch = new CountDownLatch(2);
@@ -94,8 +95,8 @@ public class PeriodicConfigRetrievalClientTest {
         builder.setConfigInfoProcessor(processor);
         builder.setConfigPollingTime(0,5, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(70,TimeUnit.SECONDS);
-        builder.setElasticacheHost("localhost");
-        builder.setElasticachePort(server.getPort());
+        builder.addElastiCacheHost(new ElastiCacheServerConnectionDetails("localhost",server.getPort()));
+
 
         client = new PeriodicConfigRetrievalClient(builder.build());
         client.start();
@@ -120,27 +121,27 @@ public class PeriodicConfigRetrievalClientTest {
             "CONFIG cluster 0 147\r\n" +
                     "-1.5\r\n" +
                     "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211\r\n" +
-                    "END\r\n",
+                    "\nEND\r\n",
             "CONFIG cluster 0 147\r\n" +
                     "0xf\r\n" +
                     "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211\r\n" +
-                    "END\r\n",
+                    "\nEND\r\n",
             "CONFIG cluster 0 147\r\n" +
                     "-\r\n" +
                     "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211\r\n" +
-                    "END\r\n",
+                    "\nEND\r\n",
             "CONFIG cluster 0 147\r\n" +
                     ".\r\n" +
                     "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211\r\n" +
-                    "END\r\n",
+                    "\nEND\r\n",
             "CONFIG cluster 0 147\r\n" +
                     " \r\n" +
                     "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211\r\n" +
-                    "END\r\n",
+                    "\nEND\r\n",
             "CONFIG cluster 0 147\r\n" +
                     (char)1+"\r\n" +
                     "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211\r\n" +
-                    "END\r\n"
+                    "\nEND\r\n"
     })
     public void testVersionConfigInfo() {
         ConfigRetrievalSettingsBuilder builder = new ConfigRetrievalSettingsBuilder();
@@ -158,8 +159,7 @@ public class PeriodicConfigRetrievalClientTest {
         builder.setConfigInfoProcessor(processor);
         builder.setConfigPollingTime(0,2, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(70,TimeUnit.SECONDS);
-        builder.setElasticacheHost("localhost");
-        builder.setElasticachePort(server.getPort());
+        builder.addElastiCacheHost(new ElastiCacheServerConnectionDetails("localhost",server.getPort()));
         builder.setNumberOfInvalidConfigsBeforeReconnect(10);
 
         client = new PeriodicConfigRetrievalClient(builder.build());
@@ -180,15 +180,15 @@ public class PeriodicConfigRetrievalClientTest {
     @ConfigMessage(message = {"CONFIG cluster 0 147\r\n" +
             "INVALID_VERSION\r\n" +
             "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211${REMOTE_ADDR}\r\n" +
-            "END\r\n"
-            ,"bob\nbob\nbob\nbob\n"
-            ,"bob\r\nbob\nbob\nbob\n"
-            ,"bob\r\nbob\nbob\nbob\n"
-            ,"bob\r\nbob\nbob\nbob\n",
+            "\nEND\r\n"
+            ,"bob\nbob\nbob\n\nbob\n"
+            ,"bob\r\nbob\nbob\n\nbob\n"
+            ,"bob\r\nbob\nbob\n\nbob\n"
+            ,"bob\r\nbob\nbob\n\nbob\n",
             "CONFIG cluster 0 147\r\n" +
             "12\r\n" +
             "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211${REMOTE_ADDR}\r\n" +
-            "END\r\n"})
+            "\nEND\r\n"})
     public void testReconnectAfterInvalidConfigInfoIsReturned() {
         ConfigRetrievalSettingsBuilder builder = new ConfigRetrievalSettingsBuilder();
         final CountDownLatch latch = new CountDownLatch(6);
@@ -210,8 +210,7 @@ public class PeriodicConfigRetrievalClientTest {
         builder.setConfigInfoProcessor(processor);
         builder.setConfigPollingTime(0,1, TimeUnit.SECONDS);
         builder.setIdleReadTimeout(70,TimeUnit.SECONDS);
-        builder.setElasticacheHost("localhost");
-        builder.setElasticachePort(server.getPort());
+        builder.addElastiCacheHost(new ElastiCacheServerConnectionDetails("localhost",server.getPort()));
         builder.setNumberOfInvalidConfigsBeforeReconnect(5);
 
         client = new PeriodicConfigRetrievalClient(builder.build());
@@ -235,7 +234,7 @@ public class PeriodicConfigRetrievalClientTest {
             "CONFIG cluster 0 147\r\n" +
                     "12\r\n" +
                     "myCluster.pc4ldq.0001.use1.cache.amazonaws.com|10.82.235.120|11211 myCluster.pc4ldq.0002.use1.cache.amazonaws.com|10.80.249.27|11211${REMOTE_ADDR}\r\n" +
-                    "END\r\n"})
+                    "\nEND\r\n"})
     public void testIdleTimeout() {
         ConfigRetrievalSettingsBuilder builder = new ConfigRetrievalSettingsBuilder();
         final CountDownLatch latch = new CountDownLatch(2);
@@ -255,10 +254,9 @@ public class PeriodicConfigRetrievalClientTest {
         };
 
         builder.setConfigInfoProcessor(processor);
-        builder.setConfigPollingTime(0,20, TimeUnit.SECONDS);
-        builder.setIdleReadTimeout(10,TimeUnit.SECONDS);
-        builder.setElasticacheHost("localhost");
-        builder.setElasticachePort(server.getPort());
+        builder.setConfigPollingTime(0, 20, TimeUnit.SECONDS);
+        builder.setIdleReadTimeout(10, TimeUnit.SECONDS);
+        builder.addElastiCacheHost(new ElastiCacheServerConnectionDetails("localhost",server.getPort()));
         builder.setNumberOfInvalidConfigsBeforeReconnect(5);
 
         client = new PeriodicConfigRetrievalClient(builder.build());

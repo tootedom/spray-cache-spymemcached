@@ -3,7 +3,7 @@ package org.greencheek.spray.cache.memcached.clientbuilder.elasticache
 import java.util.concurrent.TimeUnit
 
 import net.spy.memcached.{ConnectionFactory, MemcachedClientIF}
-import org.greencheek.elasticacheconfig.client.{PeriodicConfigRetrievalClient, ConfigRetrievalSettingsBuilder, ConfigRetrievalSettings}
+import org.greencheek.elasticacheconfig.client.{ElastiCacheServerConnectionDetails, PeriodicConfigRetrievalClient, ConfigRetrievalSettingsBuilder, ConfigRetrievalSettings}
 import org.greencheek.elasticacheconfig.confighandler.{AsyncExecutorServiceConfigInfoMessageHandler, ConfigInfoProcessor}
 import org.greencheek.spray.cache.memcached.clientbuilder.ClientFactory
 import org.greencheek.spray.cache.memcached.clientbuilder.elasticache.configparsing.DefaultElastiCacheConfigParser
@@ -17,17 +17,17 @@ import scala.concurrent.duration.Duration
  * Created by dominictootell on 22/07/2014.
  */
 class ElastiCacheClientFactory(connnectionFactory : ConnectionFactory,
-                                elasticacheConfigHost: String,
-                                elasticacheConfigPort: Int,
-                                configPollingTime : Long,
-                                initialConfigPollingDelay : Long,
-                                configPollingTimeUnit : TimeUnit,
-                                idleReadTimeout: Duration,
-                                reconnectDelay: Duration,
-                                delayBeforeClientClose : Duration,
-                                dnsLookupService : HostResolver,
-                                dnsLookupTimeout : Duration,
-                                numberOfConsecutiveInvalidConfigurationsBeforeReconnect : Int = 3
+                               elastiCacheConfigHosts : Array[ElastiCacheServerConnectionDetails],
+                               configPollingTime : Long,
+                               initialConfigPollingDelay : Long,
+                               configPollingTimeUnit : TimeUnit,
+                               idleReadTimeout: Duration,
+                               reconnectDelay: Duration,
+                               delayBeforeClientClose : Duration,
+                               dnsLookupService : HostResolver,
+                               dnsLookupTimeout : Duration,
+                               numberOfConsecutiveInvalidConfigurationsBeforeReconnect : Int,
+                               connectionTimeoutInMillis : Int
                                 ) extends ClientFactory {
 
 
@@ -58,12 +58,13 @@ class ElastiCacheClientFactory(connnectionFactory : ConnectionFactory,
   private def createConfigRetrievalSettings() : ConfigRetrievalSettings = {
     val builder = new ConfigRetrievalSettingsBuilder()
 
-    builder.setElasticacheConfigServer(elasticacheConfigHost,elasticacheConfigPort)
+    builder.addElastiCacheHosts(elastiCacheConfigHosts)
       .setConfigPollingTime(initialConfigPollingDelay,configPollingTime,configPollingTimeUnit)
       .setIdleReadTimeout(idleReadTimeout.toMillis,TimeUnit.MILLISECONDS)
       .setReconnectDelay(reconnectDelay.toMillis,TimeUnit.MILLISECONDS)
       .setNumberOfInvalidConfigsBeforeReconnect(numberOfConsecutiveInvalidConfigurationsBeforeReconnect)
       .setConfigInfoProcessor(suppliedConfigInfoProcessor)
+      .setConnectionTimeoutInMillis(connectionTimeoutInMillis)
 
     builder.build()
   }

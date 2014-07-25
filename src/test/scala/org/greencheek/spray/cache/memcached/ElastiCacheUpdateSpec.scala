@@ -31,9 +31,9 @@ class ElastiCacheUpdateSpec  extends MemcachedBasedSpec{
     "be thread-safe in xxjavahashing with xx java hash algo" in memcachedContext {
 
       val configurationsMessage = Array(
-        "CONFIG cluster 0 147\r\n" + "1\r\n" + "localhost|127.0.0.1|" + memcachedDport + "\r\n" + "END\r\n",
-        "CONFIG cluster 0 147\r\n" + "2\r\n" + "localhost|127.0.0.1|" + memcachedDport + " localhost|127.0.0.1|" + memcachedContext.memcached.port + "\r\n" + "END\r\n",
-        "CONFIG cluster 0 147\r\n" + "3\r\n" + "localhost|127.0.0.1|" + memcachedContext.memcached.port + "\r\n" + "END\r\n"
+        "CONFIG cluster 0 147\r\n" + "1\r\n" + "localhost|127.0.0.1|" + memcachedDport + "\r\n" + "\nEND\r\n",
+        "CONFIG cluster 0 147\r\n" + "2\r\n" + "localhost|127.0.0.1|" + memcachedDport + " localhost|127.0.0.1|" + memcachedContext.memcached.port + "\r\n" + "\nEND\r\n",
+        "CONFIG cluster 0 147\r\n" + "3\r\n" + "localhost|127.0.0.1|" + memcachedContext.memcached.port + "\r\n" + "\nEND\r\n"
       )
 
       var server: StringServer = new StringServer(configurationsMessage, 0, TimeUnit.SECONDS)
@@ -46,8 +46,7 @@ class ElastiCacheUpdateSpec  extends MemcachedBasedSpec{
 
 
 
-        cache = new ElastiCache[Int](elastiCacheConfigHost = "localhost",
-          elastiCacheConfigPort = server.getPort,
+        cache = new ElastiCache[Int](elastiCacheConfigHosts = "localhost:"+server.getPort.toString,
           initialConfigPollingDelay = 2,
           configPollingTime = 2,
           configPollingTimeUnit = TimeUnit.SECONDS,

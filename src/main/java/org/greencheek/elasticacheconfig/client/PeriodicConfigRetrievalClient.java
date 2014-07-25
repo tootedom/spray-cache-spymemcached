@@ -26,26 +26,34 @@ public class PeriodicConfigRetrievalClient
 
     private static final Logger log = LoggerFactory.getLogger(PeriodicConfigRetrievalClient.class);
 
-    private final String elasticachehost;
-    private final int elasticacheport;
 
     private final TimeUnit idleTimeoutTimeUnit;
     private final long readTimeout;
     private final ClientInfoClientHandler handler;
-
-
+    private final int connectionTimeoutInMillis;
+    private final ElastiCacheConfigServerChooser configServerChooser;
     private NioEventLoopGroup nioEventLoopGroup = new NioEventLoopGroup();
 
 
     public PeriodicConfigRetrievalClient(ConfigRetrievalSettings settings)
     {
-        this.elasticachehost = settings.getElasticacheConfigHost();
-        this.elasticacheport = settings.getElasticacheConfigPort();
+        ElastiCacheServerConnectionDetails[] configServers = settings.getElasticacheConfigHosts();
+        if(configServers.length==1) {
+            this.configServerChooser = new SingleElastiCacheConfigServerChooser(configServers[0]);
+        } else {
+            this.configServerChooser = new RoundRobinElastiCacheConfigServerChooser(configServers);
+        }
+
+
         this.idleTimeoutTimeUnit = settings.getIdleTimeoutTimeUnit();
         this.readTimeout = settings.getIdleReadTimeout();
+        this.connectionTimeoutInMillis = settings.getConnectionTimeoutInMillis();
+
         this.handler = createHandler(settings.getScheduledConfigRetrieval(),settings.getConfigInfoMessageHandler(),
                 settings.getReconnectDelayTimeUnit(),settings.getReconnectDelay(),idleTimeoutTimeUnit,readTimeout,
-                settings.getNumberOfConsecutiveInvalidConfigsBeforeReconnect());
+                settings.getNumberOfConsecutiveInvalidConfigsBeforeReconnect(),
+                connectionTimeoutInMillis);
+
 
 
     }
@@ -56,14 +64,16 @@ public class PeriodicConfigRetrievalClient
                                                  long reconnectionDelay,
                                                  TimeUnit idleTimeoutTimeUnit,
                                                  long idleReadTimeout,
-                                                 int noConsecutiveInvalidConfigsBeforeReconnect) {
+                                                 int noConsecutiveInvalidConfigsBeforeReconnect,
+                                                 int connectionTimeoutInMillis) {
         return new ClientInfoClientHandler(scheduledRequester,configReadHandler,reconnectTimeUnit,reconnectionDelay,
-                idleTimeoutTimeUnit,idleReadTimeout,this.elasticachehost,this.elasticacheport,noConsecutiveInvalidConfigsBeforeReconnect);
+                idleTimeoutTimeUnit,idleReadTimeout,this.configServerChooser,noConsecutiveInvalidConfigsBeforeReconnect,
+                connectionTimeoutInMillis);
     }
 
 
     public void start() {
-        configureBootstrap(this.elasticachehost,this.elasticacheport,handler,new Bootstrap(),nioEventLoopGroup,idleTimeoutTimeUnit,readTimeout);
+        configureBootstrap(this.configServerChooser,handler,new Bootstrap(),nioEventLoopGroup,idleTimeoutTimeUnit,readTimeout,connectionTimeoutInMillis);
     }
 
     public void stop() {
@@ -71,15 +81,18 @@ public class PeriodicConfigRetrievalClient
         handler.shutdown();
     }
 
-    public static ChannelFuture configureBootstrap(String host,int port,final ClientInfoClientHandler handler,
-                                                   Bootstrap b, EventLoopGroup g, final TimeUnit idleTimeoutTimeUnit, final long idleTimeout) {
+    public static ChannelFuture configureBootstrap(ElastiCacheConfigServerChooser configServerService,final ClientInfoClientHandler handler,
+                                                   Bootstrap b, EventLoopGroup g, final TimeUnit idleTimeoutTimeUnit, final long idleTimeout,
+                                                   final int connectionTimeoutInMillis) {
+        final ElastiCacheServerConnectionDetails configServer = configServerService.getServer();
         b.group(g)
                 .channel(NioSocketChannel.class)
-                .remoteAddress(host,port)
+                .remoteAddress(configServer.getHost(),configServer.getPort())
 
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
+                        ch.config().setConnectTimeoutMillis(connectionTimeoutInMillis);
                         ch.pipeline().addLast(new ConfigInfoDecoder());
                         ch.pipeline().addLast(new IdleStateHandler(idleTimeout, 0, 0,idleTimeoutTimeUnit));
                         ch.pipeline().addLast(handler);
@@ -90,7 +103,7 @@ public class PeriodicConfigRetrievalClient
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.cause() != null) {
-                    log.warn("Failed to connect: {}", future.cause());
+                    log.warn("Failed to connect: {}:{}",configServer.getHost(),configServer.getPort(), future.cause());
                 }
             }
         });

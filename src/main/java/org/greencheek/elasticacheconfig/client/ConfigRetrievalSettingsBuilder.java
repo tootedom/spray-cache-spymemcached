@@ -7,6 +7,8 @@ import org.greencheek.elasticacheconfig.confighandler.SystemOutConfigInfoProcess
 import org.greencheek.elasticacheconfig.handler.AsciiRequestConfigInfoScheduler;
 import org.greencheek.elasticacheconfig.handler.RequestConfigInfoScheduler;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -25,6 +27,8 @@ public class ConfigRetrievalSettingsBuilder {
     public static final long GET_CONFIG_POLLING_TIME = 60;
     public static final long GET_CONFIG_POLLING_INITIAL_DELAY = 0;
 
+    public static final int CONNECTION_TIMEOUT_IN_MILLIS = 3000;
+
     // If not response recieved for the last poll, then re-establish the connection
     public static final TimeUnit IDLE_TIMEOUT_TIMEUNIT = TimeUnit.SECONDS;
     public static final long IDLE_READ_TIMEOUT = 70;
@@ -36,8 +40,6 @@ public class ConfigRetrievalSettingsBuilder {
     private AsyncConfigInfoMessageHandler configInfoMessageHandler = null;
     private ConfigInfoProcessor configInfoProcessor = null;
 //
-    private String elasticacheHost = ELASTICACHE_HOST;
-    private int elasticachePort = ELASTICACHE_PORT;
 //
     private TimeUnit idleTimeoutTimeUnit = IDLE_TIMEOUT_TIMEUNIT;
     private long idleReadTimeout = IDLE_READ_TIMEOUT;
@@ -45,27 +47,29 @@ public class ConfigRetrievalSettingsBuilder {
     private TimeUnit reconnectDelayTimeUnit = RECONNECT_DELAY_TIMEUNIT;
     private long reconnectDelay = RECONNECT_DELAY;
 
+    private int connectionTimeoutInMillis = CONNECTION_TIMEOUT_IN_MILLIS;
+
     private TimeUnit configPollingTimeUnit = GET_CONFIG_POLLING_TIMEUNIT;
     private long configPollingTime = GET_CONFIG_POLLING_TIME;
     private long configPollingInitialDelay = GET_CONFIG_POLLING_INITIAL_DELAY;
 
     private int numberOfInvalidConfigsBeforeReconnect = NO_CONSECUTIVE_INVALID_CONFIGS_BEFORE_RECONNECT;
 
-    public ConfigRetrievalSettingsBuilder setElasticacheHost(String elasticachehost) {
-        this.elasticacheHost = elasticachehost;
+    private List<ElastiCacheServerConnectionDetails> elasticCacheHosts = new ArrayList<ElastiCacheServerConnectionDetails>();
+
+    public  ConfigRetrievalSettingsBuilder addElastiCacheHost(ElastiCacheServerConnectionDetails details) {
+        elasticCacheHosts.add(details);
         return this;
     }
 
-    public ConfigRetrievalSettingsBuilder setElasticachePort(int elasticachePort) {
-        this.elasticachePort = elasticachePort;
+    public  ConfigRetrievalSettingsBuilder addElastiCacheHosts(ElastiCacheServerConnectionDetails[] details) {
+        for(ElastiCacheServerConnectionDetails host : details) {
+            elasticCacheHosts.add(host);
+        }
         return this;
     }
 
-    public ConfigRetrievalSettingsBuilder setElasticacheConfigServer(String elasticacheHost, int elasticachePort) {
-        this.elasticacheHost = elasticacheHost;
-        this.elasticachePort = elasticachePort;
-        return this;
-    }
+
 
     public ConfigRetrievalSettingsBuilder setIdleReadTimeout(long idleReadTimeout,TimeUnit idleTimeoutTimeUnit) {
         this.idleReadTimeout = idleReadTimeout;
@@ -106,6 +110,11 @@ public class ConfigRetrievalSettingsBuilder {
         return this;
     }
 
+    public ConfigRetrievalSettingsBuilder setConnectionTimeoutInMillis(int connectionTimeoutInMillis) {
+        this.connectionTimeoutInMillis = connectionTimeoutInMillis;
+        return this;
+    }
+
     public ConfigRetrievalSettings build() {
         AsyncConfigInfoMessageHandler messageHandler;
         RequestConfigInfoScheduler periodicConfigObtainer;
@@ -131,8 +140,8 @@ public class ConfigRetrievalSettingsBuilder {
 
 
         return new ConfigRetrievalSettings(periodicConfigObtainer,messageHandler,
-                elasticacheHost,elasticachePort,idleTimeoutTimeUnit,idleReadTimeout,
-                reconnectDelayTimeUnit,reconnectDelay, numberOfInvalidConfigsBeforeReconnect);
+                elasticCacheHosts.toArray(new ElastiCacheServerConnectionDetails[elasticCacheHosts.size()]),idleTimeoutTimeUnit,idleReadTimeout,
+                reconnectDelayTimeUnit,reconnectDelay, numberOfInvalidConfigsBeforeReconnect,connectionTimeoutInMillis);
     }
 
 
