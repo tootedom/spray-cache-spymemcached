@@ -1,10 +1,13 @@
 package org.greencheek.spray.cache.memcached.hostparsing
 
+import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
+import org.specs2.runner.JUnitRunner
 
 /**
  * Created by dominictootell on 06/06/2014.
  */
+@RunWith(classOf[JUnitRunner])
 class CommaSeparatedHostAndPortStringParserSpec extends Specification {
 
 

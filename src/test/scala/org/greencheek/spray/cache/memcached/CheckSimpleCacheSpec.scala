@@ -1,5 +1,8 @@
 package org.greencheek.spray.cache.memcached
 
+import org.junit.runner.RunWith
+import org.specs2.runner.JUnitRunner
+
 import scala.concurrent._
 import org.specs2.mutable.Specification
 import akka.actor.ActorSystem
@@ -19,6 +22,7 @@ import net.spy.memcached.HashAlgorithm
 /**
  * Created by dominictootell on 11/06/2014.
  */
+@RunWith(classOf[JUnitRunner])
 class CheckSimpleCacheSpec extends Specification {
   implicit val system = ActorSystem()
 

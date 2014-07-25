@@ -1,8 +1,10 @@
 package org.greencheek.spray.cache.memcached
 
+import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import akka.actor.ActorSystem
 import org.greencheek.util.memcached.WithMultiMemcached
+import org.specs2.runner.JUnitRunner
 import scala.concurrent.duration.Duration
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
 import org.greencheek.spray.cache.memcached.keyhashing.XXJavaHash
@@ -13,6 +15,7 @@ import ExecutionContext.Implicits.global
 /**
  * Created by dominictootell on 08/06/2014.
  */
+@RunWith(classOf[JUnitRunner])
 class XXHashingShardingSpec extends Specification {
   implicit val system = ActorSystem()
 

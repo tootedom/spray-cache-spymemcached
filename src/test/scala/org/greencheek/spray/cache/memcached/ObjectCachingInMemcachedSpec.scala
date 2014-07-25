@@ -3,6 +3,8 @@ package org.greencheek.spray.cache.memcached
 import org.greencheek.util.memcached.{WithMemcached, MemcachedBasedSpec}
 import akka.actor.ActorSystem
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
+import org.junit.runner.RunWith
+import org.specs2.runner.JUnitRunner
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
 import scala.concurrent.{Future, ExecutionContext}
@@ -38,6 +40,7 @@ class MyObject(val name : String) extends Serializable {
 /**
  * Created by dominictootell on 02/04/2014.
  */
+@RunWith(classOf[JUnitRunner])
 class ObjectCachingInMemcachedSpec  extends MemcachedBasedSpec {
 
   implicit val system = ActorSystem()
