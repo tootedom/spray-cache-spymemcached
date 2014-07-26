@@ -65,7 +65,7 @@ The library is availble in maven central, and the dependency is as follows:
     <dependency>
       <groupId>org.greencheek.spray</groupId>
       <artifactId>spray-cache-spymemcached</artifactId>
-      <version>0.1.19</version>
+      <version>0.2.0</version>
     </dependency>
 
 The library was build using scala 2.10.x.  It has not be tested with scala 2.9.x.  Therefore, consider it only compatible
@@ -76,11 +76,12 @@ with 2.10.x
 The library uses the Java Spy Memcached library (https://code.google.com/p/spymemcached/), to communicate with memcached.
 It is compiled against the latest version of spray.  The libraries depedencies are as follows:
 
+    [INFO] +- io.netty:netty-all:jar:4.0.21.Final:compile
     [INFO] +- io.spray:spray-caching:jar:1.3.1:compile
     [INFO] |  +- io.spray:spray-util:jar:1.3.1:compile
     [INFO] |  +- org.scala-lang:scala-library:jar:2.10.3:compile
     [INFO] |  \- com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:jar:1.4:compile
-    [INFO] +- net.spy:spymemcached:jar:2.11.3:compile
+    [INFO] +- net.spy:spymemcached:jar:2.11.4:compile
     [INFO] +- com.twitter:jsr166e:jar:1.1.0:compile
     [INFO] +- org.slf4j:slf4j-api:jar:1.7.6:compile
     [INFO] +- net.jpountz.lz4:lz4:jar:1.2.0:compile
