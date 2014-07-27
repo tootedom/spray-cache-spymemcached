@@ -65,11 +65,15 @@ The library is availble in maven central, and the dependency is as follows:
     <dependency>
       <groupId>org.greencheek.spray</groupId>
       <artifactId>spray-cache-spymemcached</artifactId>
-      <version>0.2.1</version>
+      <version>0.2.2</version>
     </dependency>
 
 The library was build using scala 2.10.x.  It has not be tested with scala 2.9.x.  Therefore, consider it only compatible
 with 2.10.x
+
+Please do not use version `0.2.1`, this contained a bug for a newly added feature (updateConfigVersionOnDnsTimeout = false).
+It is recommend to update to `0.2.2`, as this contains a new version of spy memcached library, that contains optimizations
+for the binary memcached protocol.
 
 ## Library Dependencies ##
 
