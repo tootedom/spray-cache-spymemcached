@@ -7,6 +7,6 @@ import org.greencheek.spray.cache.memcached.clientbuilder.elasticache.ElastiCach
  */
 trait UpdateClientService {
   def getClient : ReferencedClient
-  def updateClientConnections(hosts: Seq[ElastiCacheHost]) : Boolean
+  def updateClientConnections(hosts: Seq[ElastiCacheHost]) : ReferencedClient
   def shutdown : Unit
 }

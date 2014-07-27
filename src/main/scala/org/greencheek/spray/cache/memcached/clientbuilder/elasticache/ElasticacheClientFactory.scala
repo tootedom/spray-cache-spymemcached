@@ -26,6 +26,7 @@ class ElastiCacheClientFactory(connnectionFactory : ConnectionFactory,
                                delayBeforeClientClose : Duration,
                                dnsLookupService : HostResolver,
                                dnsLookupTimeout : Duration,
+                               updateConfigVersionOnDnsTimeout : Boolean,
                                numberOfConsecutiveInvalidConfigurationsBeforeReconnect : Int,
                                connectionTimeoutInMillis : Int
                                 ) extends ClientFactory {
@@ -35,7 +36,7 @@ class ElastiCacheClientFactory(connnectionFactory : ConnectionFactory,
   val memcachedClientHolder : UpdateClientService = new UpdateReferencedMemcachedClientService(dnsLookupService,
     dnsLookupTimeout,connnectionFactory,delayBeforeClientClose)
 
-  val suppliedConfigInfoProcessor : ConfigInfoProcessor = new ElastiCacheConfigInfoProcessor(DefaultElastiCacheConfigParser,memcachedClientHolder)
+  val suppliedConfigInfoProcessor : ConfigInfoProcessor = new ElastiCacheConfigInfoProcessor(DefaultElastiCacheConfigParser,memcachedClientHolder,updateConfigVersionOnDnsTimeout)
   val elastiCacheConfigPeriodicConfigRetrievalSettings : ConfigRetrievalSettings = createConfigRetrievalSettings()
 
   val configRetrievalClient = new PeriodicConfigRetrievalClient(elastiCacheConfigPeriodicConfigRetrievalSettings);

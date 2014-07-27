@@ -38,6 +38,7 @@ class ElastiCache[Serializable](val timeToLive: Duration = MemcachedCache.DEFAUL
                                 val readBufferSize : Int = DefaultConnectionFactory.DEFAULT_READ_BUFFER_SIZE,
                                 val memcachedGetTimeout : Duration = Duration(2500,TimeUnit.MILLISECONDS),
                                 val dnsConnectionTimeout : Duration = Duration(3,TimeUnit.SECONDS),
+                                val updateConfigVersionOnDnsTimeout : Boolean = true,
                                 val waitForMemcachedSet : Boolean = false,
                                 val setWaitDuration : Duration = Duration(2,TimeUnit.SECONDS),
                                 val allowFlush : Boolean = false,
@@ -75,6 +76,7 @@ class ElastiCache[Serializable](val timeToLive: Duration = MemcachedCache.DEFAUL
     delayBeforeClientClose = delayBeforeClientClose,
     dnsLookupService = hostResolver,
     dnsLookupTimeout = dnsConnectionTimeout,
+    updateConfigVersionOnDnsTimeout = updateConfigVersionOnDnsTimeout,
     numberOfConsecutiveInvalidConfigurationsBeforeReconnect = numberOfConsecutiveInvalidConfigurationsBeforeReconnect,
     connectionTimeoutInMillis = connectionTimeoutInMillis
   )

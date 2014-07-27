@@ -27,28 +27,29 @@ class UpdateReferencedMemcachedClientService(val dnsLookupService : HostResolver
   @volatile var referencedClient : ReferencedClient = UnavailableReferencedClient
 
 
-  override def updateClientConnections(hosts: Seq[ElastiCacheHost]): Boolean = {
+  override def updateClientConnections(hosts: Seq[ElastiCacheHost]): ReferencedClient = {
       val shutdown = isShutdown.get()
       if(shutdown) {
-        return false
+        return referencedClient
       }
 
       val currentClient: ReferencedClient = referencedClient
       if (hosts.size == 0) {
         logger.warn("No cache hosts available.  Marking cache as disabled.")
         referencedClient = UnavailableReferencedClient
-        true
+        UnavailableReferencedClient
       } else {
         val resolvedHosts: Seq[InetSocketAddress] = getSocketAddresses(hosts);
         if (resolvedHosts.size == 0) {
           logger.warn("No resolvable cache hosts available.  Marking cache as disabled.")
           referencedClient = UnavailableReferencedClient
-          true
+          UnavailableReferencedClient
         } else {
           logger.info("New client being created for new cache hosts.")
 
-          referencedClient =  ReferencedClient(true, new MemcachedClient(memcachedConnectionFactory, convert(resolvedHosts)))
+          val newClient : ReferencedClient = ReferencedClient(true,resolvedHosts, new MemcachedClient(memcachedConnectionFactory, convert(resolvedHosts)))
 
+          referencedClient = newClient
           if (currentClient.isAvailable) {
             logger.debug("Scheduling shutdown of old cache client in {}ms",delayBeforeOldClientClose.toMillis )
             scheduledExecutor.schedule(new Runnable {
@@ -59,10 +60,12 @@ class UpdateReferencedMemcachedClientService(val dnsLookupService : HostResolver
             }, delayBeforeOldClientClose.toMillis, TimeUnit.MILLISECONDS)
           }
 
+          // A shutdown may have occurred mid creation of the new client,
+          // so we shutdown the old one
           if(isShutdown.get() != shutdown) {
             shutdown
           }
-          true
+          newClient
         }
       }
 

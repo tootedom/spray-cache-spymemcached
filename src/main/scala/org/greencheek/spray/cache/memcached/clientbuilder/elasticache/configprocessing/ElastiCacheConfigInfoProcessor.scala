@@ -12,7 +12,9 @@ import org.slf4j.{LoggerFactory, Logger}
  * Created by dominictootell on 22/07/2014.
  */
 class ElastiCacheConfigInfoProcessor(val configParser : ElastiCacheConfigParser,
-                                      val updateClientService : UpdateClientService ) extends ConfigInfoProcessor{
+                                      val updateClientService : UpdateClientService,
+                                      val updateConfigVersionOnDnsTimeout : Boolean
+                                      ) extends ConfigInfoProcessor{
 
   private val logger  : Logger = LoggerFactory.getLogger(classOf[MemcachedCache[Serializable]])
 
@@ -25,8 +27,11 @@ class ElastiCacheConfigInfoProcessor(val configParser : ElastiCacheConfigParser,
 
       if(latestConfigVersion>currentVersion) {
         logger.info("Configuration version has increased.  Reconfiguring client")
-        currentConfigVersionNumber = latestConfigVersion
-        updateClientService.updateClientConnections(configParser.parseServers(info.getServers))
+
+        val updatedClient = updateClientService.updateClientConnections(configParser.parseServers(info.getServers))
+        if(updateConfigVersionOnDnsTimeout == true || updatedClient.resolvedHosts.size==info.getServers.size) {
+          currentConfigVersionNumber = latestConfigVersion
+        }
       }
       else if(latestConfigVersion==currentVersion) {
         logger.info("Configuration is up to date")
