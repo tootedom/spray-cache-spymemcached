@@ -39,7 +39,7 @@ class ElastiCacheConfigInfoProcessorSpec extends Specification {
     counter.get must beEqualTo(3)
   }
 
-  "Test new configuration version results in config change" in {
+  "Test unresolved host does not result in config change" in {
     val counter = new AtomicInteger(0)
     val configUpdateService: UpdateClientService = new CountingAndResolvingClientService(counter)
 
@@ -50,13 +50,37 @@ class ElastiCacheConfigInfoProcessorSpec extends Specification {
       processor.processConfig(new ConfigInfo("header", 1, "localhost||11211", true))
       processor.processConfig(new ConfigInfo("header", 2, "localhost||11211", true))
       processor.processConfig(new ConfigInfo("header", 2, "localhost||11211", true))
+      processor.processConfig(new ConfigInfo("header", 3, "unknownhost.123.com||11211", true))
+      processor.processConfig(new ConfigInfo("header", 3, "localhost||11211", true))
+      processor.processConfig(new ConfigInfo("header", 4, "localhost|127.0.0.1|11211", true))
+      processor.processConfig(new ConfigInfo("header", 2, "localhost||11211", false))
+      processor.processConfig(new ConfigInfo("header", 2, "localhost||11211", true))
+
+      counter.get must beEqualTo(5)
+    }
+    finally {
+      configUpdateService.shutdown
+    }
+  }
+
+  "Test unresolved host does can result in config change" in {
+    val counter = new AtomicInteger(0)
+    val configUpdateService: UpdateClientService = new CountingAndResolvingClientService(counter)
+
+    try {
+
+      val processor: ConfigInfoProcessor = new ElastiCacheConfigInfoProcessor(DefaultElastiCacheConfigParser, configUpdateService, true)
+
+      processor.processConfig(new ConfigInfo("header", 1, "localhost||11211", true))
+      processor.processConfig(new ConfigInfo("header", 2, "localhost||11211", true))
+      processor.processConfig(new ConfigInfo("header", 2, "localhost||11211", true))
       processor.processConfig(new ConfigInfo("header", 3, "unknownhost.123.com||11211", false))
       processor.processConfig(new ConfigInfo("header", 3, "localhost||11211", false))
       processor.processConfig(new ConfigInfo("header", 4, "localhost|127.0.0.1|11211", true))
       processor.processConfig(new ConfigInfo("header", 2, "localhost||11211", false))
       processor.processConfig(new ConfigInfo("header", 2, "localhost||11211", true))
 
-      counter.get must beEqualTo(5)
+      counter.get must beEqualTo(3)
     }
     finally {
       configUpdateService.shutdown

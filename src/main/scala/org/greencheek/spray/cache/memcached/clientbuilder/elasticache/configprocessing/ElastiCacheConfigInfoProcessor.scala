@@ -28,8 +28,9 @@ class ElastiCacheConfigInfoProcessor(val configParser : ElastiCacheConfigParser,
       if(latestConfigVersion>currentVersion) {
         logger.info("Configuration version has increased.  Reconfiguring client")
 
-        val updatedClient = updateClientService.updateClientConnections(configParser.parseServers(info.getServers))
-        if(updateConfigVersionOnDnsTimeout == true || updatedClient.resolvedHosts.size==info.getServers.size) {
+        val parsedServers = configParser.parseServers(info.getServers)
+        val updatedClient = updateClientService.updateClientConnections(parsedServers)
+        if(updateConfigVersionOnDnsTimeout == true || updatedClient.resolvedHosts.size==parsedServers.size) {
           currentConfigVersionNumber = latestConfigVersion
         }
       }

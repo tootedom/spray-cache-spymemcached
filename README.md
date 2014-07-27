@@ -65,7 +65,7 @@ The library is availble in maven central, and the dependency is as follows:
     <dependency>
       <groupId>org.greencheek.spray</groupId>
       <artifactId>spray-cache-spymemcached</artifactId>
-      <version>0.2.0</version>
+      <version>0.2.1</version>
     </dependency>
 
 The library was build using scala 2.10.x.  It has not be tested with scala 2.9.x.  Therefore, consider it only compatible
@@ -869,4 +869,32 @@ This can be changed with the parameter `dnsConnectionTimeout`
 ````
     dnsConnectionTimeout = Duration(5,TimeUnit.SECONDS)
 ````
+
+
+If a DNS lookup fails, due to connection timeout, or otherwise.  By default that host will be excluded from the
+list of memcached hosts the cache client will be connected to.  This will not change unless you update the 
+cluster configuration and a new version of the config is supplied by the ElastiCache Configuration Endpoint.
+
+In version `0.2.2` (ignore 0.2.1 - it contained a bug) a new configuration property `updateConfigVersionOnDnsTimeout` was created that allowed you to change 
+this behaviour when a host is not resolved.  The resolution of a host's dns may be a temporary issue, and on the next 
+polling config the dns will be resolvable.  If you set 
+
+````
+    updateConfigVersionOnDnsTimeout = false
+````
+
+Then the memcached client will be updated to point to the hosts mentioned in the config; but if any host resolution fails;
+the client will not record the current configuration's version number.  Meaning on the next poll for the current cluster 
+configuration, the memcached client will again be recreated, to point to the hosts specified in configuration.
+
+Note if the dns resolution is constantly failing then client memcached client will constantly be re-created each time the 
+configuration pooling occurs.  No validation of the previously resolved hosts, and the current resolved hosts is performed.
+The client will just be recreated.
+
+A dns resolution failure will result in an error like the following in the logs:
+
+````
+    16:03:28.289 [specs2.DefaultExecutionStrategy2] ERROR o.g.s.c.m.h.dnslookup.HostResolver - Problem resolving host name to ip address: unknownhost.123.com
+````
+
 
