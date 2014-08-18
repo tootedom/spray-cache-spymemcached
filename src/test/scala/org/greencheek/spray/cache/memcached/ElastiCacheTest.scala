@@ -78,7 +78,7 @@ class ElastiCacheTest extends MemcachedBasedSpec {
 
         Thread.sleep(1000)
 
-        cache("content")(future {
+        cache("content")(Future {
           Thread.sleep(1000)
           "WILL BE STALE"
         }).await === "WILL BE STALE"
@@ -88,7 +88,7 @@ class ElastiCacheTest extends MemcachedBasedSpec {
 
         Thread.sleep(2500)
 
-        val passThrough = cache("content")(future {
+        val passThrough = cache("content")(Future {
           Thread.sleep(1000)
           "NEW VALUE"
         })

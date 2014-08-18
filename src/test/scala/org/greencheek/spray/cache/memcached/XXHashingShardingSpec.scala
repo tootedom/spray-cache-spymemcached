@@ -5,6 +5,7 @@ import org.specs2.mutable.Specification
 import akka.actor.ActorSystem
 import org.greencheek.util.memcached.WithMultiMemcached
 import org.specs2.runner.JUnitRunner
+import spray.util.pimps.PimpedFuture
 import scala.concurrent.duration.Duration
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
 import org.greencheek.spray.cache.memcached.keyhashing.XXJavaHash
@@ -17,6 +18,8 @@ import ExecutionContext.Implicits.global
  */
 @RunWith(classOf[JUnitRunner])
 class XXHashingShardingSpec extends Specification {
+  implicit def pimpFuture[T](fut: Future[T]): PimpedFuture[T] = new PimpedFuture[T](fut)
+
   implicit val system = ActorSystem()
 
   val numberOfMemcaches = 3

@@ -6,6 +6,7 @@ import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
 import org.specs2.runner.JUnitRunner
+import spray.util.pimps.PimpedFuture
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
 import spray.util._
@@ -14,7 +15,7 @@ import ExecutionContext.Implicits.global
 import spray.caching.Cache
 import org.greencheek.spray.cache.memcached.keyhashing.XXJavaHash
 import org.greencheek.spy.extensions.FastSerializingTranscoder
-
+import org.specs2.matcher.FutureMatchers.{await =>  bob }
 
 @SerialVersionUID(1l) case class PonziScheme(owner : Person, victims : Seq[Person])
 
@@ -27,6 +28,8 @@ import org.greencheek.spy.extensions.FastSerializingTranscoder
 
 @RunWith(classOf[JUnitRunner])
 class SerializationExampleSpec extends Specification {
+  implicit def pimpFuture[T](fut: Future[T]): PimpedFuture[T] = new PimpedFuture[T](fut)
+
   val memcachedContext = WithMemcached(false)
 
   "Example case class serialization" in memcachedContext {

@@ -4,10 +4,14 @@ import org.specs2.mutable.Specification
 
 import java.net.ServerSocket
 import org.greencheek.util.PortUtil
+import spray.util.pimps.PimpedFuture
 
+import scala.concurrent.Future
 
 
 trait MemcachedBasedSpec extends Specification {
+  implicit def pimpFuture[T](fut: Future[T]): PimpedFuture[T] = new PimpedFuture[T](fut)
+
 
   import org.specs2._
   import specification._

@@ -20,6 +20,7 @@ import org.specs2.runner.JUnitRunner
 @RunWith(classOf[JUnitRunner])
 class ExpiryMemcachedCacheSpec extends MemcachedBasedSpec {
 
+
   implicit val system = ActorSystem()
 
   val memcachedContext = WithMemcached(false)

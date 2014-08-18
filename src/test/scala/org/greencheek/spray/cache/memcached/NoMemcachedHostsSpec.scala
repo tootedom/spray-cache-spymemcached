@@ -35,7 +35,7 @@ class NoMemcachedHostsSpec extends MemcachedBasedSpec {
       val cache = new MemcachedCache[String](memcachedHosts = hosts, protocol = Protocol.TEXT,
         doHostConnectionAttempt = true, throwExceptionOnNoHosts = false)
 
-      val myFuture = future {
+      val myFuture = Future {
         try {
           Thread.sleep(5000)
         } catch {
@@ -67,7 +67,7 @@ class NoMemcachedHostsSpec extends MemcachedBasedSpec {
     val cache = new MemcachedCache[String](memcachedHosts = "", protocol = Protocol.TEXT,
       doHostConnectionAttempt = true, throwExceptionOnNoHosts = false)
 
-    val myFuture = future {
+    val myFuture = Future {
       try {
         Thread.sleep(5000)
       } catch {
@@ -126,7 +126,7 @@ class NoMemcachedHostsSpec extends MemcachedBasedSpec {
     val cache = new MemcachedCache[String](memcachedHosts = "localhost.1", protocol = Protocol.TEXT,
       doHostConnectionAttempt = true, throwExceptionOnNoHosts = false, dnsConnectionTimeout = Duration(1,TimeUnit.SECONDS))
 
-    val myFuture = future {
+    val myFuture = Future {
       try {
         Thread.sleep(5000)
       } catch {

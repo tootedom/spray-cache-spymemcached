@@ -3,6 +3,7 @@ package org.greencheek.spray.cache.memcached
 import org.greencheek.util.memcached.WithMemcached
 import org.specs2.runner.JUnitRunner
 import org.junit.runner.RunWith
+import spray.util.pimps.PimpedFuture
 import scala.concurrent.Future
 import spray.util._
 import org.greencheek.util.memcached.WithMemcached
@@ -13,11 +14,13 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 import org.greencheek.spray.cache.memcached.keyhashing.XXJavaHash
 
+
 /**
  * Created by dominictootell on 30/03/2014.
  */
 @RunWith(classOf[JUnitRunner])
 class AsciiMemcachedCacheSpec extends MemcachedCacheSpec{
+
   override def getMemcacheContext(): WithMemcached = WithMemcached(false)
 
   "be thread-safe" in memcachedContext {

@@ -3,6 +3,7 @@ package org.greencheek.spray.cache.memcached
 
 import java.util.concurrent.{TimeUnit, CountDownLatch}
 import akka.actor.ActorSystem
+import spray.util.pimps.PimpedFuture
 import scala.concurrent.duration._
 import org.specs2.mutable.Specification
 import spray.util._
@@ -14,6 +15,8 @@ import org.greencheek.spray.cache.memcached.keyhashing.{NoKeyHash, KeyHashType}
 import net.spy.memcached.HashAlgorithm
 
 abstract class MemcachedCacheSpec extends Specification {
+  implicit def pimpFuture[T](fut: Future[T]): PimpedFuture[T] = new PimpedFuture[T](fut)
+
   implicit val system = ActorSystem()
 
   def getMemcacheContext() : WithMemcached
@@ -44,7 +47,7 @@ abstract class MemcachedCacheSpec extends Specification {
     "store and wait on same future" in memcachedContext {
       val cache = memcachedCache[String](getMemcachedHostsString.getOrElse("localhost:"+memcachedContext.memcached.port),binary = memcachedContext.binary)
 
-      val option1 = cache("20")(future {
+      val option1 = cache("20")(Future {
         try {
           Thread.sleep(1000)
         } catch {
@@ -66,7 +69,7 @@ abstract class MemcachedCacheSpec extends Specification {
       val cache = memcachedCache[String](getMemcachedHostsString.getOrElse("localhost:"+memcachedContext.memcached.port),1,binary = memcachedContext.binary,
                                           waitForMemcachedSet = true)
 
-      val option1 = cache("35")( future {
+      val option1 = cache("35")( Future {
         try {
           Thread.sleep(1000)
           System.out.println("Sleep End.. 35")
@@ -79,7 +82,7 @@ abstract class MemcachedCacheSpec extends Specification {
         "hello"
       })
 
-      val option2 = cache("45")( future {
+      val option2 = cache("45")( Future {
         try {
           Thread.sleep(500)
           System.out.println("Sleep End.. 45")

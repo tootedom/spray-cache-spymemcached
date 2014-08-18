@@ -2,6 +2,7 @@ package org.greencheek.spray.cache.memcached
 
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
+import spray.util.pimps.PimpedFuture
 
 import scala.concurrent._
 import org.specs2.mutable.Specification
@@ -24,6 +25,8 @@ import net.spy.memcached.HashAlgorithm
  */
 @RunWith(classOf[JUnitRunner])
 class CheckSimpleCacheSpec extends Specification {
+  implicit def pimpFuture[T](fut: Future[T]): PimpedFuture[T] = new PimpedFuture[T](fut)
+
   implicit val system = ActorSystem()
 
   val memcachedContext = WithMemcached(false)
@@ -37,7 +40,7 @@ class CheckSimpleCacheSpec extends Specification {
       val cache = new MemcachedCache[String] ( memcachedHosts = hosts, protocol = Protocol.TEXT,
         timeToLive = Duration(5,TimeUnit.SECONDS),waitForMemcachedSet = true)
 
-      val option1 = cache("20")(future {
+      val option1 = cache("20")( Future {
         try {
           Thread.sleep(1000)
         } catch {

@@ -3,6 +3,7 @@ package org.greencheek.spray.cache.memcached
 import org.greencheek.util.memcached.{WithMemcached}
 import akka.actor.ActorSystem
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
+import spray.util.pimps.PimpedFuture
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 import org.specs2.runner.JUnitRunner
@@ -17,6 +18,8 @@ import spray.util._
  */
 @RunWith(classOf[JUnitRunner])
 class DelayedFutureSpec extends Specification {
+  implicit def pimpFuture[T](fut: Future[T]): PimpedFuture[T] = new PimpedFuture[T](fut)
+
   implicit val system = ActorSystem()
 
   val memcachedContext = WithMemcached(false)
@@ -26,7 +29,7 @@ class DelayedFutureSpec extends Specification {
       val cache = new MemcachedCache[String](Duration.Zero, 10000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
         waitForMemcachedSet = true, allowFlush = false, keyHashType = SHA256KeyHash)
 
-      val option1 = cache("35")(future {
+      val option1 = cache("35")(Future {
         try {
           Thread.sleep(1000)
           System.out.println("Sleep End.. 35")
@@ -39,7 +42,7 @@ class DelayedFutureSpec extends Specification {
         "hello"
       })
 
-      val option2 = cache("45")(future {
+      val option2 = cache("45")(Future {
         try {
           Thread.sleep(500)
           System.out.println("Sleep End.. 45")
@@ -69,7 +72,7 @@ class DelayedFutureSpec extends Specification {
       val cache = new MemcachedCache[SimpleClass](Duration.Zero, 10000, "localhost:" + memcachedContext.memcached.port, protocol = Protocol.TEXT,
         waitForMemcachedSet = true, allowFlush = false, keyHashType = SHA256KeyHash, hashAlgorithm = MemcachedCache.XXHASH_ALGORITHM)
 
-      val option1 = cache("35")(future {
+      val option1 = cache("35")(Future {
         try {
           Thread.sleep(1000)
           System.out.println("Sleep End.. 35")
@@ -82,7 +85,7 @@ class DelayedFutureSpec extends Specification {
         SimpleClass(35)
       })
 
-      val option2 = cache("35")(future {
+      val option2 = cache("35")(Future {
         try {
           Thread.sleep(500)
           System.out.println("Sleep End.. 45")

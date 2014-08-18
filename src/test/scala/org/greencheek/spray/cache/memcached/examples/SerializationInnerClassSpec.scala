@@ -7,6 +7,7 @@ import org.specs2.runner.JUnitRunner
 import spray.caching.Cache
 import org.greencheek.spray.cache.memcached.MemcachedCache
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
+import spray.util.pimps.PimpedFuture
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
 import org.greencheek.spray.cache.memcached.keyhashing.XXJavaHash
@@ -21,6 +22,8 @@ import org.greencheek.spy.extensions.SerializingTranscoder
  */
 @RunWith(classOf[JUnitRunner])
 class SerializationInnerClassSpec extends Specification {
+  implicit def pimpFuture[T](fut: Future[T]): PimpedFuture[T] = new PimpedFuture[T](fut)
+
   val memcachedContext = WithMemcached(false)
 
   "Example inner case class serialization" in memcachedContext {

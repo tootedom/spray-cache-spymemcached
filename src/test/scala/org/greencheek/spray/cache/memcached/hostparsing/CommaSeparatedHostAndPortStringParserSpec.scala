@@ -17,7 +17,7 @@ class CommaSeparatedHostAndPortStringParserSpec extends Specification {
 
     listOfHosts.size mustEqual 1
 
-    listOfHosts must haveTheSameElementsAs(List(("localhost",11111)))
+    listOfHosts must contain(exactly(List(("localhost",11111)):_*))
   }
   "A host string with two hosts and ports ending in a comma, should parse to two hosts" in {
     val hostparser = CommaSeparatedHostAndPortStringParser
@@ -25,7 +25,7 @@ class CommaSeparatedHostAndPortStringParserSpec extends Specification {
 
     listOfHosts.size mustEqual 2
 
-    listOfHosts must haveTheSameElementsAs(List(("localhost",11111),("hosttwo",13456)))
+    listOfHosts must contain(exactly(List(("localhost",11111),("hosttwo",13456)):_*))
   }
   "A host string with two hosts and large port, ending in a comma, should parse to two hosts with a default port" in {
     val hostparser = CommaSeparatedHostAndPortStringParser
@@ -33,7 +33,7 @@ class CommaSeparatedHostAndPortStringParserSpec extends Specification {
 
     listOfHosts.size mustEqual 2
 
-    listOfHosts must haveTheSameElementsAs(List(("localhost",11111),("hosttwo",11211)))
+    listOfHosts must contain(exactly(List(("localhost",11111),("hosttwo",11211)):_*))
   }
   "A host string with three hosts and ports, should parse to 3 hosts" in {
     val hostparser = CommaSeparatedHostAndPortStringParser
@@ -41,6 +41,6 @@ class CommaSeparatedHostAndPortStringParserSpec extends Specification {
 
     listOfHosts.size mustEqual 3
 
-    listOfHosts must haveTheSameElementsAs(List(("localhost",11111),("hosttwo",11211),("hosty",12121)))
+    listOfHosts must contain(exactly(List(("localhost",11111),("hosttwo",11211),("hosty",12121)):_*))
   }
 }

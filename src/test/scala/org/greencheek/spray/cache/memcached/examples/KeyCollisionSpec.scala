@@ -6,6 +6,7 @@ import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import net.spy.memcached.ConnectionFactoryBuilder.Protocol
 import org.specs2.runner.JUnitRunner
+import spray.util.pimps.PimpedFuture
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
 import spray.util._
@@ -22,6 +23,8 @@ import org.greencheek.spray.cache.memcached.keyhashing.XXJavaHash
  */
 @RunWith(classOf[JUnitRunner])
 class KeyCollisionSpec extends Specification {
+  implicit def pimpFuture[T](fut: Future[T]): PimpedFuture[T] = new PimpedFuture[T](fut)
+
 
 
   val productId = ProductId("1a")
